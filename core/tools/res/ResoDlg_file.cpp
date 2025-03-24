@@ -338,33 +338,24 @@ void ResoDlg::Save(std::map<std::string, std::string>& mapConf, const std::strin
 	for(std::size_t iCombo = 0; iCombo < m_vecComboBoxes.size(); ++iCombo)
 		mapConf[strXmlRoot + m_vecComboNames[iCombo]] = tl::var_to_str<int>(m_vecComboBoxes[iCombo]->currentIndex());
 
+	// get the resolution calculation method
 	ResoAlgo algo = ResoDlg::GetSelectedAlgo();
 	const int iAlgo = static_cast<int>(algo);
 	mapConf[strXmlRoot + "reso/algo_idx"] = tl::var_to_str<int>(static_cast<int>(algo));
 
+	std::string algo_name = "unknown";
 	switch(algo)
 	{
-		case ResoAlgo::CN:
-			mapConf[strXmlRoot + "reso/algo"] = "cn";
-			break;
-		case ResoAlgo::POP_CN:
-			mapConf[strXmlRoot + "reso/algo"] = "pop_cn";
-			break;
-		case ResoAlgo::POP:
-			mapConf[strXmlRoot + "reso/algo"] = "pop";
-			break;
-		case ResoAlgo::ECK:
-			mapConf[strXmlRoot + "reso/algo"] = "eck";
-			break;
-		case ResoAlgo::VIO:
-			mapConf[strXmlRoot + "reso/algo"] = "vio";
-			break;
-		case ResoAlgo::SIMPLE:
-			mapConf[strXmlRoot + "reso/algo"] = "simple";
-			break;
-		default:
-			break;
+		case ResoAlgo::CN: algo_name = "cn"; break;
+		case ResoAlgo::POP_CN: algo_name = "pop_cn"; break;
+		case ResoAlgo::POP: algo_name = "pop"; break;
+		case ResoAlgo::ECK: algo_name = "eck"; break;
+		case ResoAlgo::ECK_EXT: algo_name = "eck_ext"; break;
+		case ResoAlgo::VIO: algo_name = "vio"; break;
+		case ResoAlgo::SIMPLE: algo_name = "simple"; break;
+		default: break;
 	}
+	mapConf[strXmlRoot + "reso/algo"] = algo_name;
 
 	mapConf[strXmlRoot + "reso/use_guide"] = groupGuide->isChecked() ? "1" : "0";
 
@@ -386,7 +377,8 @@ void ResoDlg::Load(tl::Prop<std::string>& xml, const std::string& strXmlRoot)
 {
 	if(!xml.PathExists(strXmlRoot + "reso"))
 	{
-		QMessageBox::critical(this, "Error", "Cannot load the selected file as is does not seem to be a Takin/Resolution file.");
+		QMessageBox::critical(this, "Error",
+			"Cannot load the selected file as is does not seem to be a Takin/Resolution file.");
 		return;
 	}
 
@@ -402,34 +394,45 @@ void ResoDlg::Load(tl::Prop<std::string>& xml, const std::string& strXmlRoot)
 		spinDistHSrcMono->setValue(*odSpinVal);
 	}
 
+	// load vertical kf scattering flag from older version as default before overriding with the new ones
+	spinScatterKfAngle->setValue(0.);  // default if nothing else is given
+	boost::optional<int> obVertKf = xml.QueryOpt<int>(strXmlRoot + std::string("reso/scatter_kf_vert"));
+	if(obVertKf)
+			spinScatterKfAngle->setValue(*obVertKf ? 90. : 0.);
+
 	for(std::size_t iSpinBox = 0; iSpinBox < m_vecSpinBoxes.size(); ++iSpinBox)
 	{
 		boost::optional<t_real_reso> odSpinVal = xml.QueryOpt<t_real_reso>(strXmlRoot+m_vecSpinNames[iSpinBox]);
-		if(odSpinVal) m_vecSpinBoxes[iSpinBox]->setValue(*odSpinVal);
+		if(odSpinVal)
+			m_vecSpinBoxes[iSpinBox]->setValue(*odSpinVal);
 	}
 
 	for(std::size_t iSpinBox = 0; iSpinBox < m_vecIntSpinBoxes.size(); ++iSpinBox)
 	{
 		boost::optional<int> odSpinVal = xml.QueryOpt<int>(strXmlRoot+m_vecIntSpinNames[iSpinBox]);
-		if(odSpinVal) m_vecIntSpinBoxes[iSpinBox]->setValue(*odSpinVal);
+		if(odSpinVal)
+			m_vecIntSpinBoxes[iSpinBox]->setValue(*odSpinVal);
 	}
 
 	for(std::size_t iEditBox = 0; iEditBox < m_vecEditBoxes.size(); ++iEditBox)
 	{
 		boost::optional<std::string> odEditVal = xml.QueryOpt<std::string>(strXmlRoot+m_vecEditNames[iEditBox]);
-		if(odEditVal) m_vecEditBoxes[iEditBox]->setText(odEditVal->c_str());
+		if(odEditVal)
+			m_vecEditBoxes[iEditBox]->setText(odEditVal->c_str());
 	}
 
 	for(std::size_t iEditBox = 0; iEditBox < m_vecPosEditBoxes.size(); ++iEditBox)
 	{
 		boost::optional<t_real_reso> odEditVal = xml.QueryOpt<t_real_reso>(strXmlRoot+m_vecPosEditNames[iEditBox]);
-		if(odEditVal) m_vecPosEditBoxes[iEditBox]->setText(tl::var_to_str(*odEditVal, g_iPrec).c_str());
+		if(odEditVal)
+			m_vecPosEditBoxes[iEditBox]->setText(tl::var_to_str(*odEditVal, g_iPrec).c_str());
 	}
 
 	for(std::size_t iCheck = 0; iCheck < m_vecCheckBoxes.size(); ++iCheck)
 	{
 		boost::optional<int> obChecked = xml.QueryOpt<int>(strXmlRoot+m_vecCheckNames[iCheck]);
-		if(obChecked) m_vecCheckBoxes[iCheck]->setChecked(*obChecked);
+		if(obChecked)
+			m_vecCheckBoxes[iCheck]->setChecked(*obChecked);
 	}
 
 	for(std::size_t iRadio = 0; iRadio < m_vecRadioPlus.size(); ++iRadio)
@@ -447,7 +450,8 @@ void ResoDlg::Load(tl::Prop<std::string>& xml, const std::string& strXmlRoot)
 	for(std::size_t iCombo = 0; iCombo < m_vecComboBoxes.size(); ++iCombo)
 	{
 		boost::optional<int> oiComboIdx = xml.QueryOpt<int>(strXmlRoot+m_vecComboNames[iCombo]);
-		if(oiComboIdx) m_vecComboBoxes[iCombo]->setCurrentIndex(*oiComboIdx);
+		if(oiComboIdx)
+			m_vecComboBoxes[iCombo]->setCurrentIndex(*oiComboIdx);
 	}
 
 	// get reso algo by name
@@ -462,6 +466,8 @@ void ResoDlg::Load(tl::Prop<std::string>& xml, const std::string& strXmlRoot)
 			SetSelectedAlgo(ResoAlgo::POP);
 		else if(*opAlgo == "eck")
 			SetSelectedAlgo(ResoAlgo::ECK);
+		else if(*opAlgo == "eck_ext")
+			SetSelectedAlgo(ResoAlgo::ECK_EXT);
 		else if(*opAlgo == "vio" || *opAlgo == "viol")
 			SetSelectedAlgo(ResoAlgo::VIO);
 		else if(*opAlgo == "simple")

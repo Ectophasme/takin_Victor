@@ -31,7 +31,7 @@
 setup_buildenv=1
 setup_externals=1
 build_takin=1
-build_takin2=1
+build_magpie=1
 build_plugins=1
 build_package=1
 
@@ -76,18 +76,16 @@ if [ $setup_externals -ne 0 ]; then
 	echo -e "Getting external dependencies..."
 	echo -e "================================================================================\n"
 
+	if ! ./setup/externals/setup_modules.sh; then
+		exit -1
+	fi
+
 	pushd "${TAKIN_ROOT}/core"
 		rm -rf tmp
 		if ! ../setup/externals/setup_externals.sh; then
 			exit -1
 		fi
 		if ! ../setup/externals/get_3rdparty_licenses.sh; then
-			exit -1
-		fi
-	popd
-
-	pushd "${TAKIN_ROOT}/mag-core"
-		if ! ../setup/externals/setup_externals_mag.sh; then
 			exit -1
 		fi
 	popd
@@ -106,7 +104,7 @@ if [ $build_takin -ne 0 ]; then
 		cd build
 
 		#if ! cmake -DDISABLE_INTERPROC_XSI=True -DDEBUG=False ..; then
-		if ! cmake -DDEBUG=False ..; then
+		if ! cmake -DCMAKE_BUILD_TYPE=Release -DDEBUG=False ..; then
 			echo -e "Failed configuring core package."
 			exit -1
 		fi
@@ -119,9 +117,9 @@ if [ $build_takin -ne 0 ]; then
 fi
 
 
-if [ $build_takin2 -ne 0 ]; then
+if [ $build_magpie -ne 0 ]; then
 	echo -e "\n================================================================================"
-	echo -e "Building Takin mag-core..."
+	echo -e "Building Magpie core..."
 	echo -e "================================================================================\n"
 
 	pushd "${TAKIN_ROOT}/mag-core"
@@ -146,7 +144,7 @@ if [ $build_takin2 -ne 0 ]; then
 		cp -v tools/bz/takin_bz "${TAKIN_ROOT}"/core/bin/
 		cp -v tools/structfact/takin_structfact "${TAKIN_ROOT}"/core/bin/
 		cp -v tools/magstructfact/takin_magstructfact "${TAKIN_ROOT}"/core/bin/
-		cp -v tools/magdyn/takin_magdyn "${TAKIN_ROOT}"/core/bin/
+		cp -v tools/magdyn/magpie "${TAKIN_ROOT}"/core/bin/
 		cp -v tools/scanbrowser/takin_scanbrowser "${TAKIN_ROOT}"/core/bin/
 		cp -v tools/magsgbrowser/takin_magsgbrowser "${TAKIN_ROOT}"/core/bin/
 		cp -v tools/moldyn/takin_moldyn "${TAKIN_ROOT}"/core/bin/

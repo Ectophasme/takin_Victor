@@ -81,29 +81,6 @@ enum EckKiKfIdx : std::size_t
 };
 
 
-/**
- * general R0 normalisation factor from [mit84], equ. A.57
- */
-template<class t_real = double>
-t_real mitch_R0(bool norm_to_ki_vol,
-	t_real dmono_refl, t_real dana_effic,
-	t_real dKiVol, t_real dKfVol, t_real dResVol,
-	bool bNormToResVol = false)
-{
-	t_real dR0 = dana_effic * dKfVol;
-	if(!norm_to_ki_vol)
-		dR0 *= dmono_refl * dKiVol;
-
-	// not needed for MC simulations, because the gaussian generated
-	// with std::normal_distribution is already normalised
-	// see: tools/test/tst_norm.cpp
-	if(bNormToResVol)
-		dR0 /= (dResVol * tl::get_pi<t_real>() * t_real{3});
-
-	return dR0;
-}
-
-
 static std::tuple<t_mat, t_vec, t_real, t_real, t_real>
 get_mono_vals(const length& src_w, const length& src_h,
 	const length& mono_w, const length& mono_h,
@@ -129,27 +106,27 @@ get_mono_vals(const length& src_w, const length& src_h,
 
 		A(0, 0) = t_real(0.5)*sig2fwhm*sig2fwhm / (ki*angs*ki*angs) * t_th_m*t_th_m *
 		(
-/*a*/			+ units::pow<2>(t_real(2)/coll_h_pre_mono) *rads*rads
-/*b*/			+ units::pow<2>(t_real(2)*dist_hsrc_mono/src_w)
-/*c*/			+ A_t0*A_t0 * rads*rads
+/*a*/		+ units::pow<2>(t_real(2)/coll_h_pre_mono) *rads*rads
+/*b*/		+ units::pow<2>(t_real(2)*dist_hsrc_mono/src_w)
+/*c*/		+ A_t0*A_t0 * rads*rads
 		);
 		A(0, 1) = A(1, 0) = t_real(0.5)*sig2fwhm*sig2fwhm / (ki*angs*ki*angs) * t_th_m *
 		(
-/*w*/			+ t_real(2)*tl::my_units_pow2(t_real(1)/coll_h_pre_mono) *rads*rads
-/*x*/			+ t_real(2)*dist_hsrc_mono*(dist_hsrc_mono-dist_mono_sample)/(src_w*src_w)
-/*y*/			+ A_t0*A_t0 * rads*rads
-/*z*/			- A_t0*A_t1 * rads*rads
+/*w*/		+ t_real(2)*tl::my_units_pow2(t_real(1)/coll_h_pre_mono) *rads*rads
+/*x*/		+ t_real(2)*dist_hsrc_mono*(dist_hsrc_mono-dist_mono_sample)/(src_w*src_w)
+/*y*/		+ A_t0*A_t0 * rads*rads
+/*z*/		- A_t0*A_t1 * rads*rads
 		);
 		A(1, 1) = t_real(0.5)*sig2fwhm*sig2fwhm / (ki*angs*ki*angs) *
 		(
-/*1*/			+ units::pow<2>(t_real(1)/coll_h_pre_mono) *rads*rads
-/*2*/			+ units::pow<2>(t_real(1)/coll_h_pre_sample) *rads*rads
-/*3*/			+ units::pow<2>((dist_hsrc_mono-dist_mono_sample)/src_w)
-/*4*/			+ units::pow<2>(dist_mono_sample/(mono_w*s_th_m))
+/*1*/		+ units::pow<2>(t_real(1)/coll_h_pre_mono) *rads*rads
+/*2*/		+ units::pow<2>(t_real(1)/coll_h_pre_sample) *rads*rads
+/*3*/		+ units::pow<2>((dist_hsrc_mono-dist_mono_sample)/src_w)
+/*4*/		+ units::pow<2>(dist_mono_sample/(mono_w*s_th_m))
 
-/*5*/			+ A_t0*A_t0 * rads*rads
-/*6*/			- t_real(2)*A_t0*A_t1 * rads*rads
-/*7*/			+ A_t1*A_t1 * rads*rads
+/*5*/		+ A_t0*A_t0 * rads*rads
+/*6*/		- t_real(2)*A_t0*A_t1 * rads*rads
+/*7*/		+ A_t1*A_t1 * rads*rads
 		);
 	}
 
@@ -164,27 +141,27 @@ get_mono_vals(const length& src_w, const length& src_h,
 
 		Av(0, 0) = t_real(0.5)*sig2fwhm*sig2fwhm / (ki*angs*ki*angs) *
 		(
-/*1*/	//		+ units::pow<2>(t_real(1) / coll_v_pre_mono) *rads*rads	// missing in paper?
-/*2*/			+ units::pow<2>(t_real(1) / coll_v_pre_sample) *rads*rads
-/*~3*/			+ units::pow<2>(dist_mono_sample / src_h)
-/*4*/			+ units::pow<2>(dist_mono_sample / mono_h)
+/*1*/	//	+ units::pow<2>(t_real(1) / coll_v_pre_mono) *rads*rads	// missing in paper?
+/*2*/		+ units::pow<2>(t_real(1) / coll_v_pre_sample) *rads*rads
+/*~3*/		+ units::pow<2>(dist_mono_sample / src_h)
+/*4*/		+ units::pow<2>(dist_mono_sample / mono_h)
 
-/*5*/			+ Av_t0*Av_t0 * rads*rads
-/*6*/			- t_real(2)*Av_t0*Av_t1 * rads*rads     // typo in paper?
-/*7*/			+ Av_t1*Av_t1 * rads*rads               // missing in paper?
+/*5*/		+ Av_t0*Av_t0 * rads*rads
+/*6*/		- t_real(2)*Av_t0*Av_t1 * rads*rads     // typo in paper?
+/*7*/		+ Av_t1*Av_t1 * rads*rads               // missing in paper?
 		);
 		Av(0, 1) = Av(1, 0) = t_real(0.5)*sig2fwhm*sig2fwhm / (ki*angs*ki*angs) *
 		(
-/*w*/	//		- units::pow<2>(1./coll_v_pre_mono) *rads*rads   // missing in paper?
-/*~x*/			+ dist_vsrc_mono*dist_mono_sample/(src_h*src_h)
-/*y*/			- Av_t0*Av_t0 * rads*rads
-/*z*/			+ Av_t0*Av_t1 * rads*rads
+/*w*/	//	- units::pow<2>(1./coll_v_pre_mono) *rads*rads   // missing in paper?
+/*~x*/		+ dist_vsrc_mono*dist_mono_sample/(src_h*src_h)
+/*y*/		- Av_t0*Av_t0 * rads*rads
+/*z*/		+ Av_t0*Av_t1 * rads*rads
 		);
 		Av(1, 1) = t_real(0.5)*sig2fwhm*sig2fwhm / (ki*angs*ki*angs) *
 		(
-/*a*/			+ units::pow<2>(t_real(1)/coll_v_pre_mono) *rads*rads
-/*b*/			+ units::pow<2>(dist_vsrc_mono/src_h)
-/*c*/			+ Av_t0*Av_t0 *rads*rads
+/*a*/		+ units::pow<2>(t_real(1)/coll_v_pre_mono) *rads*rads
+/*b*/		+ units::pow<2>(dist_vsrc_mono/src_h)
+/*c*/		+ Av_t0*Av_t0 *rads*rads
 		);
 	}
 
@@ -195,15 +172,15 @@ get_mono_vals(const length& src_w, const length& src_h,
 
 		B(0) = sig2fwhm*sig2fwhm * pos_y / (ki*angs) * t_th_m *
 		(
-/*i*/			+ t_real(2)*dist_hsrc_mono / (src_w*src_w)
-/*j*/			+ B_t0 *rads*rads
+/*i*/		+ t_real(2)*dist_hsrc_mono / (src_w*src_w)
+/*j*/		+ B_t0 *rads*rads
 		);
 		B(1) = sig2fwhm*sig2fwhm * pos_y / (ki*angs) *
 		(
-/*r*/			- dist_mono_sample / (units::pow<2>(mono_w*s_th_m))
-/*s*/			+ B_t0 * rads*rads
-/*t*/			- B_t0 * rads*rads * inv_mono_curvh*dist_mono_sample / s_th_m
-/*u*/			+ (dist_hsrc_mono-dist_mono_sample) / (src_w*src_w)
+/*r*/		- dist_mono_sample / (units::pow<2>(mono_w*s_th_m))
+/*s*/		+ B_t0 * rads*rads
+/*t*/		- B_t0 * rads*rads * inv_mono_curvh*dist_mono_sample / s_th_m
+/*u*/		+ (dist_hsrc_mono-dist_mono_sample) / (src_w*src_w)
 		);
 	}
 
@@ -214,15 +191,15 @@ get_mono_vals(const length& src_w, const length& src_h,
 
 		Bv(0) = sig2fwhm*sig2fwhm * pos_z / (ki*angs) * t_real(-1.) *
 		(
-/*r*/			+ dist_mono_sample / (mono_h*mono_h)    // typo in paper?
-/*~s*/			- t_real(0.5)*Bv_t0 *rads*rads / s_th_m
-/*~t*/			+ Bv_t0 * rads*rads * inv_mono_curvv*dist_mono_sample
-/*~u*/			+ dist_mono_sample / (src_h*src_h)      // typo in paper?
+/*r*/		+ dist_mono_sample / (mono_h*mono_h)    // typo in paper?
+/*~s*/		- t_real(0.5)*Bv_t0 *rads*rads / s_th_m
+/*~t*/		+ Bv_t0 * rads*rads * inv_mono_curvv*dist_mono_sample
+/*~u*/		+ dist_mono_sample / (src_h*src_h)      // typo in paper?
 		);
 		Bv(1) = sig2fwhm*sig2fwhm * pos_z / (ki*angs) * t_real(-1.) *
 		(
-/*i*/			+ dist_vsrc_mono / (src_h*src_h)        // typo in paper?
-/*j*/			+ t_real(0.5)*Bv_t0/s_th_m * rads*rads
+/*i*/		+ dist_vsrc_mono / (src_h*src_h)        // typo in paper?
+/*j*/		+ t_real(0.5)*Bv_t0/s_th_m * rads*rads
 		);
 	}
 
@@ -246,7 +223,7 @@ get_mono_vals(const length& src_w, const length& src_h,
 
 	// z components, [eck14], equ. 42
 	A(2, 2) = Av(0, 0) - Av(0, 1)*Av(0, 1)/Av(1, 1);
-	B[2] = Bv[0] - Bv[1]*Av(0, 1)/Av(1,1);
+	B[2] = Bv[0] - Bv[1]*Av(0, 1)/Av(1, 1);
 	t_real D = Cv - t_real(0.25)*Bv[1]*Bv[1]/Av(1, 1);  // typo in paper? (thanks to F. Bourdarot for pointing this out)
 
 	// [eck14], equ. 54, in th paper the sqrt factor is missing in some other equations
@@ -379,10 +356,14 @@ ResoResults calc_eck(const EckParams& eck)
 	length pos_z2 = eck.pos_z;
 
 	// vertical scattering in kf axis, formula from [eck20]
-	if(eck.bKfVertical)
+	bool bKfVertical = (eck.angle_kf/rads > t_real(0));
+	if(bKfVertical)
 	{
-		pos_z2 = -pos_y2;
-		pos_y2 = eck.pos_z;
+		// rotation around x
+		pos_z2 = pos_y2 * units::sin(-eck.angle_kf)
+			+ eck.pos_z * units::cos(-eck.angle_kf);
+		pos_y2 = pos_y2 * units::cos(-eck.angle_kf)
+			- eck.pos_z * units::sin(-eck.angle_kf);
 	}
 
 	std::future<std::tuple<t_mat, t_vec, t_real, t_real, t_real>> futAna
@@ -417,15 +398,12 @@ ResoResults calc_eck(const EckParams& eck)
 	const t_real& dReflA = std::get<4>(tupAna);
 
 	// vertical scattering in kf axis, formula from [eck20]
-	if(eck.bKfVertical)
+	if(bKfVertical)
 	{
-		t_mat matTvert = ublas::zero_matrix<t_real>(3,3);
-		matTvert(0,0) = 1.;
-		matTvert(1,2) = 1.;
-		matTvert(2,1) = -1.;
+		t_mat matTvert = tl::rotation_matrix_3d_x(-eck.angle_kf / rads);
 
 		E = tl::transform(E, matTvert, true);
-		F = ublas::prod(matTvert, F);
+		F = ublas::prod(ublas::trans(matTvert), F);  // typo in paper (transpose)?
 	}
 	//--------------------------------------------------------------------------
 

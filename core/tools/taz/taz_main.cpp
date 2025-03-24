@@ -47,10 +47,15 @@
 #include <system_error>
 #include <boost/version.hpp>
 #include <boost/system/system_error.hpp>
-#include <boost/asio/io_service.hpp>
 #include <boost/asio/signal_set.hpp>
 #include <boost/scope_exit.hpp>
 #include <boost/program_options.hpp>
+
+#if BOOST_VERSION >= 108700
+	#include <boost/asio/io_context.hpp>
+#else
+	#include <boost/asio/io_service.hpp>
+#endif
 
 #ifndef USE_BOOST_REX
 	#include <regex>
@@ -223,7 +228,11 @@ int main(int argc, char** argv)
 #endif
 
 		// install exit signal handlers
+#if BOOST_VERSION >= 108700
+		asio::io_context ioSrv;
+#else
 		asio::io_service ioSrv;
+#endif
 		asio::signal_set sigInt(ioSrv, SIGABRT, SIGTERM, SIGINT);
 		sigInt.async_wait([&ioSrv, pidMain](const sys::error_code& err, int iSig)
 		{
@@ -269,6 +278,7 @@ int main(int argc, char** argv)
 		bool bStartMonteconvo = false;
 		bool bStartMonteconvoCLI = false;
 		bool bStartConvofit = false;
+		bool bStartConvoseries = false;
 		bool bStartRes = false;
 		bool bStartTakinMain = true, bStartGui = true;
 
@@ -305,6 +315,10 @@ int main(int argc, char** argv)
 			new opts::option_description("convofit",
 			opts::bool_switch(&bStartConvofit),
 			"runs the convolution fitting command-line tool")));
+		args.add(boost::shared_ptr<opts::option_description>(
+			new opts::option_description("convoseries",
+			opts::bool_switch(&bStartConvoseries),
+			"runs the convolution series command-line tool")));
 
 		// positional args
 		opts::positional_options_description args_pos;
@@ -321,9 +335,9 @@ int main(int argc, char** argv)
 		opts::store(parsedopts, opts_map);
 		opts::notify(opts_map);
 
-		if(bStartMonteconvo || bStartScanviewer || bStartMonteconvoCLI || bStartConvofit || bStartRes)
+		if(bStartMonteconvo || bStartScanviewer || bStartMonteconvoCLI || bStartConvofit || bStartConvoseries || bStartRes)
 			bStartTakinMain = false;
-		if(bStartMonteconvoCLI || bStartConvofit)
+		if(bStartMonteconvoCLI || bStartConvofit || bStartConvoseries)
 			bStartGui = false;
 
 		if(bShowHelp)
@@ -417,6 +431,8 @@ int main(int argc, char** argv)
 			return monteconvo_main(argc, argv);
 		else if(bStartConvofit)
 			return convofit_main(argc, argv);
+		else if(bStartConvoseries)
+			return convoseries_main(argc, argv);
 		else if(bStartRes)
 			return res_main(argc, argv);
 

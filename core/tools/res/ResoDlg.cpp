@@ -82,7 +82,7 @@ ResoDlg::ResoDlg(QWidget *pParent, QSettings* pSettings)
 
 	setupAlgos();
 	connect(comboAlgo, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &ResoDlg::AlgoChanged);
-	comboAlgo->setCurrentIndex(static_cast<int>(ResoAlgo::POP)-1);
+	comboAlgo->setCurrentIndex(3);  // default: pop
 
 	groupGuide->setChecked(false);
 
@@ -105,6 +105,7 @@ ResoDlg::ResoDlg(QWidget *pParent, QSettings* pSettings)
 		spinDistVSrcMono, spinDistHSrcMono,
 
 		spinMonitorW, spinMonitorH, spinDistMonoMonitor,
+		spinScatterKfAngle,
 
 		spinMonoMosaicV, spinSampleMosaicV, spinAnaMosaicV,
 		spinSamplePosX, spinSamplePosY, spinSamplePosZ,
@@ -137,6 +138,7 @@ ResoDlg::ResoDlg(QWidget *pParent, QSettings* pSettings)
 		"reso/pop_dist_vsrc_mono", "reso/pop_dist_hsrc_mono",
 
 		"reso/pop_monitor_w", "reso/pop_monitor_h", "reso/pop_dist_mono_monitor",
+		"reso/scatter_kf_angle",
 
 		"reso/eck_mono_mosaic_v", "reso/eck_sample_mosaic_v", "reso/eck_ana_mosaic_v",
 		"reso/eck_sample_pos_x", "reso/eck_sample_pos_y", "reso/eck_sample_pos_z",
@@ -161,9 +163,9 @@ ResoDlg::ResoDlg(QWidget *pParent, QSettings* pSettings)
 	m_vecPosEditNames = {"reso/E", "reso/Q", "reso/ki", "reso/kf"};
 
 	m_vecCheckBoxes = {checkUseGeneralR0, checkUseKi3, checkUseKf3,
-		checkUseKfKi, checkUseKi, checkUseMonitor, checkKfVert};
+		checkUseKfKi, checkUseKi, checkUseMonitor};
 	m_vecCheckNames = {"reso/use_general_R0", "reso/use_ki3", "reso/use_kf3",
-		"reso/use_kfki", "reso/use_monki", "reso/use_mon", "reso/scatter_kf_vert"};
+		"reso/use_kfki", "reso/use_monki", "reso/use_mon"};
 
 
 	m_vecRadioPlus = {radioMonoScatterPlus, radioAnaScatterPlus,
@@ -231,11 +233,13 @@ void ResoDlg::setupAlgos()
 {
 	comboAlgo->addItem("TAS: Cooper-Nathans (Pointlike)", static_cast<int>(ResoAlgo::CN));
 	comboAlgo->addItem("TAS: Popovici (Pointlike)", static_cast<int>(ResoAlgo::POP_CN));
+	comboAlgo->insertSeparator(2);
 	comboAlgo->addItem("TAS: Popovici", static_cast<int>(ResoAlgo::POP));
 	comboAlgo->addItem("TAS: Eckold-Sobolev", static_cast<int>(ResoAlgo::ECK));
-	comboAlgo->insertSeparator(4);
-	comboAlgo->addItem("TOF: Violini", static_cast<int>(ResoAlgo::VIO));
+	comboAlgo->addItem("TAS: Eckold-Sobolev (Extended)", static_cast<int>(ResoAlgo::ECK_EXT));
 	comboAlgo->insertSeparator(6);
+	comboAlgo->addItem("TOF: Violini", static_cast<int>(ResoAlgo::VIO));
+	comboAlgo->insertSeparator(8);
 	comboAlgo->addItem("Simple", static_cast<int>(ResoAlgo::SIMPLE));
 }
 
@@ -334,7 +338,7 @@ void ResoDlg::Calc()
 
 		ResoResults &res = m_res;
 
-		// CN parameters
+		// cn parameters
 		cn.mono_d = t_real_reso(spinMonod->value()) * angs;
 		cn.ana_d = t_real_reso(spinAnad->value()) * angs;
 		cn.mono_mosaic = t_real_reso(tl::m2r(spinMonoMosaic->value())) * rads;
@@ -412,14 +416,14 @@ void ResoDlg::Calc()
 		//cn.E = tl::get_energy_transfer(cn.ki, cn.kf);*/
 
 
-		// Pop parameters
+		// pop parameters
 		cn.mono_w = t_real_reso(spinMonoW->value()) * cm;
 		cn.mono_h = t_real_reso(spinMonoH->value()) * cm;
 		cn.mono_thick = t_real_reso(spinMonoThick->value()) * cm;
 		cn.mono_curvh = t_real_reso(spinMonoCurvH->value()) * cm;
 		cn.mono_curvv = t_real_reso(spinMonoCurvV->value()) * cm;
-		cn.bMonoIsCurvedH = cn.bMonoIsCurvedV = 0;
-		cn.bMonoIsOptimallyCurvedH = cn.bMonoIsOptimallyCurvedV = 0;
+		cn.bMonoIsCurvedH = cn.bMonoIsCurvedV = false;
+		cn.bMonoIsOptimallyCurvedH = cn.bMonoIsOptimallyCurvedV = false;
 
 		spinMonoCurvH->setEnabled(comboMonoHori->currentIndex() == 2);
 		spinMonoCurvV->setEnabled(comboMonoVert->currentIndex() == 2);
@@ -483,11 +487,11 @@ void ResoDlg::Calc()
 		cn.dist_mono_monitor = t_real_reso(spinDistMonoMonitor->value()) * cm;
 
 
-		// eck
+		// eck parameters
 		cn.pos_x = t_real_reso(spinSamplePosX->value()) * cm;
 		cn.pos_y = t_real_reso(spinSamplePosY->value()) * cm;
 		cn.pos_z = t_real_reso(spinSamplePosZ->value()) * cm;
-		cn.bKfVertical = checkKfVert->isChecked();
+		cn.angle_kf = tl::d2r(t_real_reso(spinScatterKfAngle->value())) * rads;
 
 		// TODO
 		cn.mono_numtiles_h = 1;
@@ -557,6 +561,7 @@ void ResoDlg::Calc()
 			case ResoAlgo::POP_CN: res = calc_pop_cn(cn); break;
 			case ResoAlgo::POP: res = calc_pop(cn); break;
 			case ResoAlgo::ECK: res = calc_eck(cn); break;
+			case ResoAlgo::ECK_EXT: res = calc_eck_ext(cn); break;
 			case ResoAlgo::VIO: res = calc_vio(tof); break;
 			case ResoAlgo::SIMPLE: res = calc_simplereso(simple); break;
 			default: tl::log_err("Unknown resolution algorithm selected."); return;
@@ -833,7 +838,7 @@ void ResoDlg::Calc()
 
 void ResoDlg::SetSelectedAlgo(ResoAlgo algo)
 {
-	for(int iItem=0; iItem<comboAlgo->count(); ++iItem)
+	for(int iItem = 0; iItem < comboAlgo->count(); ++iItem)
 	{
 		QVariant varAlgo = comboAlgo->itemData(iItem);
 		if(algo == static_cast<ResoAlgo>(varAlgo.toInt()))
@@ -843,7 +848,7 @@ void ResoDlg::SetSelectedAlgo(ResoAlgo algo)
 		}
 	}
 
-	tl::log_err("Unknown resolution algorithm set.");
+	tl::log_err("Unknown resolution algorithm set, index: ", static_cast<int>(algo), ".");
 }
 
 
@@ -853,7 +858,7 @@ ResoAlgo ResoDlg::GetSelectedAlgo() const
 	ResoAlgo algoSel = ResoAlgo::UNKNOWN;
 	QVariant varAlgo = comboAlgo->itemData(comboAlgo->currentIndex());
 	if(varAlgo == QVariant::Invalid)
-		tl::log_err("Unknown resolution algorithm selected.");
+		tl::log_err("Unknown resolution algorithm selected, index: ", static_cast<int>(algoSel), ".");
 	else
 		algoSel = static_cast<ResoAlgo>(varAlgo.toInt());
 	return algoSel;
@@ -1218,6 +1223,20 @@ void ResoDlg::AlgoChanged()
 			break;
 		}
 		case ResoAlgo::ECK:
+		{
+			tabWidget->setTabEnabled(0,1);
+			tabWidget->setTabEnabled(1,1);
+			tabWidget->setTabEnabled(2,1);
+			tabWidget->setTabEnabled(3,0);
+			tabWidget->setTabEnabled(4,0);
+
+			strAlgo = "<b>G. Eckold and <br>O. Sobolev</b><br>\n";
+			strAlgo += "<a href=http://dx.doi.org/10.1016/j.nima.2014.03.019>"
+				"NIM A 752, <br>pp. 54-64</a><br>\n";
+			strAlgo += "2014";
+			break;
+		}
+		case ResoAlgo::ECK_EXT:
 		{
 			tabWidget->setTabEnabled(0,1);
 			tabWidget->setTabEnabled(1,1);

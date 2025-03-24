@@ -26,7 +26,13 @@
  * ----------------------------------------------------------------------------
  */
 
-#include <boost/asio/io_service.hpp>
+#include <boost/version.hpp>
+#if BOOST_VERSION >= 108700
+	#include <boost/asio/io_context.hpp>
+#else
+	#include <boost/asio/io_service.hpp>
+#endif
+
 #include <boost/asio/signal_set.hpp>
 #include <boost/scope_exit.hpp>
 #include <boost/program_options.hpp>
@@ -207,6 +213,8 @@ static ConvoConfig load_config(const tl::Prop<std::string>& xml)
 			cfg.algo = ResoAlgo::POP;
 		else if(*algo == "eck"  || *algo == "2")
 			cfg.algo = ResoAlgo::ECK;
+		else if(*algo == "eck_ext"  || *algo == "4")
+			cfg.algo = ResoAlgo::ECK_EXT;
 		else if(*algo == "vio"  || *algo == "3")
 			cfg.algo = ResoAlgo::VIO;
 		else

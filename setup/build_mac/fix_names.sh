@@ -52,6 +52,7 @@ declare -a filestochange=(
 	"${PRG}/Contents/Frameworks/QtXmlPatterns.framework/Versions/5/QtXmlPatterns"
 	"${PRG}/Contents/Frameworks/qwt.framework/Versions/6/qwt"
 	"${PRG}/Contents/MacOS/takin"
+	"${PRG}/Contents/MacOS/magpie"
 	"${PRG}/Contents/MacOS/takin_cif2xml"
 	"${PRG}/Contents/MacOS/takin_findsg"
 	"${PRG}/Contents/MacOS/takin_bz"
@@ -59,7 +60,6 @@ declare -a filestochange=(
 	"${PRG}/Contents/MacOS/takin_magstructfact"
 	"${PRG}/Contents/MacOS/takin_scanbrowser"
 	"${PRG}/Contents/MacOS/takin_magsgbrowser"
-	"${PRG}/Contents/MacOS/takin_magdyn"
 	"${PRG}/Contents/MacOS/takin_moldyn"
 	"${PRG}/Contents/MacOS/takinmod_py"
 	"${PRG}/Contents/MacOS/takinmod_jl"
@@ -89,7 +89,7 @@ declare -a changefrom=(
 	"otool -L __BIN_FILE__ | grep -o -m1 \"/[-_/@.a-zA-Z0-9]*/libboost_atomic-mt.dylib\""
 	"otool -L __BIN_FILE__ | grep -o -m1 \"/[-_/@.a-zA-Z0-9]*/libboost_iostreams-mt.dylib\""
 	"otool -L __BIN_FILE__ | grep -o -m1 \"/[-_/@.a-zA-Z0-9]*/libboost_program_options-mt.dylib\""
-	"otool -L __BIN_FILE__ | grep -o -m1 \"/[-_/@.a-zA-Z0-9]*/libboost_python312-mt.dylib\""
+	"otool -L __BIN_FILE__ | grep -o -m1 \"/[-_/@.a-zA-Z0-9]*/libboost_python313-mt.dylib\""
 	"otool -L __BIN_FILE__ | grep -o -m1 \"/[-_/@.a-zA-Z0-9]*/libMinuit2.0.dylib\""
 	"otool -L __BIN_FILE__ | grep -o -m1 \"/[-_/@.a-zA-Z0-9]*/libjpeg.9.dylib\""
 	"otool -L __BIN_FILE__ | grep -o -m1 \"/[-_/@.a-zA-Z0-9]*/libpng16.16.dylib\""
@@ -115,7 +115,9 @@ declare -a changefrom=(
 	"otool -L __BIN_FILE__ | grep -E -o -m1 \"(/|@rpath)[-_/@.a-zA-Z0-9]*/libhdf5_cpp.310.dylib\""
 	"otool -L __BIN_FILE__ | grep -E -o -m1 \"(/|@rpath)[-_/@.a-zA-Z0-9]*/libhdf5.310.dylib\""
 	"otool -L __BIN_FILE__ | grep -E -o -m1 \"(/|@rpath)[-_/@.a-zA-Z0-9]*/libsz.2.dylib\""
+	"otool -L __BIN_FILE__ | grep -E -o -m1 \"(/|@rpath)[-_/@.a-zA-Z0-9]*/libaec.0.dylib\""
 	"otool -L __BIN_FILE__ | grep -E -o -m1 \"(/|@rpath)[-_/@.a-zA-Z0-9]*/libqcustomplot[_a-zA-Z0-9]*.dylib\""
+	"otool -L __BIN_FILE__ | grep -o -m1 \"/[-_/@.a-zA-Z0-9]*/libmd4c.0.dylib\""
 )
 
 # symbols to change into
@@ -137,7 +139,7 @@ declare -a changeto=(
 	"@executable_path/../Libraries/libboost_atomic-mt.dylib"
 	"@executable_path/../Libraries/libboost_iostreams-mt.dylib"
 	"@executable_path/../Libraries/libboost_program_options-mt.dylib"
-	"@executable_path/../Libraries/libboost_python312-mt.dylib"
+	"@executable_path/../Libraries/libboost_python313-mt.dylib"
 	"@executable_path/../Libraries/libMinuit2.0.dylib"
 	"@executable_path/../Libraries/libjpeg.9.dylib"
 	"@executable_path/../Libraries/libpng16.16.dylib"
@@ -163,7 +165,9 @@ declare -a changeto=(
 	"@executable_path/../Libraries/libhdf5_cpp.310.dylib"
 	"@executable_path/../Libraries/libhdf5.310.dylib"
 	"@executable_path/../Libraries/libsz.2.dylib"
+	"@executable_path/../Libraries/libaec.0.dylib"
 	"@executable_path/../Libraries/libqcustomplot.dylib"
+	"@executable_path/../Libraries/libmd4c.0.dylib"
 )
 
 CNT=$(expr ${#changefrom[*]} - 1)

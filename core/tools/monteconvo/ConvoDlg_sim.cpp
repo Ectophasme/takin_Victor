@@ -40,6 +40,42 @@ using t_stopwatch = tl::Stopwatch<t_real>;
 
 
 /**
+ * select a new resolution calculation method
+ */
+void ConvoDlg::SetSelectedAlgo(ResoAlgo algo)
+{
+	for(int iItem = 0; iItem < comboAlgo->count(); ++iItem)
+	{
+		QVariant varAlgo = comboAlgo->itemData(iItem);
+		if(algo == static_cast<ResoAlgo>(varAlgo.toInt()))
+		{
+			comboAlgo->setCurrentIndex(iItem);
+			return;
+		}
+	}
+
+	tl::log_err("Unknown resolution algorithm set, index: ", static_cast<int>(algo), ".");
+}
+
+
+/**
+ * currently selected resolution calculation method
+ */
+ResoAlgo ConvoDlg::GetSelectedAlgo() const
+{
+	ResoAlgo algoSel = ResoAlgo::UNKNOWN;
+	QVariant varAlgo = comboAlgo->itemData(comboAlgo->currentIndex());
+	if(varAlgo == QVariant::Invalid)
+		tl::log_err("Unknown resolution algorithm selected, index: ", static_cast<int>(algoSel), ".");
+	else
+		algoSel = static_cast<ResoAlgo>(varAlgo.toInt());
+
+	return algoSel;
+}
+
+
+
+/**
  * create 1d convolution
  */
 void ConvoDlg::Start1D()
@@ -199,11 +235,10 @@ void ConvoDlg::StartSim1D(bool bForceDeferred, unsigned int seed)
 			// -------------------------------------------------------------------------
 		}
 
-		reso.SetAlgo(ResoAlgo(comboAlgo->currentIndex()+1));
+		reso.SetAlgo(GetSelectedAlgo());
 		reso.SetKiFix(comboFixedK->currentIndex() == 0);
 		reso.SetKFix(spinKfix->value());
 		reso.SetOptimalFocus(get_reso_focus(comboFocMono->currentIndex(), comboFocAna->currentIndex()));
-
 
 		if(m_pSqw == nullptr || !m_pSqw->IsOk())
 		{
@@ -211,7 +246,6 @@ void ConvoDlg::StartSim1D(bool bForceDeferred, unsigned int seed)
 			fktEnableButtons();
 			return;
 		}
-
 
 
 		// meta data
@@ -287,7 +321,7 @@ void ConvoDlg::StartSim1D(bool bForceDeferred, unsigned int seed)
 				-> std::pair<bool, t_real>
 			{
 				if(this->StopRequested())
-					return std::pair<bool, t_real>(false, 0.);
+					return std::make_pair(false, 0.);
 
 				t_real dS = 0.;
 				t_real dhklE_mean[4] = { 0., 0., 0., 0. };
@@ -311,13 +345,14 @@ void ConvoDlg::StartSim1D(bool bForceDeferred, unsigned int seed)
 							ostrErr << "Invalid crystal position: ("
 								<< dCurH << " " << dCurK << " " << dCurL << ") rlu, "
 								<< dCurE << " meV.";
-							throw tl::Err(ostrErr.str().c_str());
+							tl::log_err(ostrErr.str());
+							return std::make_pair(false, 0.);
 						}
 					}
 					catch(const std::exception& ex)
 					{
 						tl::log_err(ex.what());
-						return std::pair<bool, t_real>(false, 0.);
+						return std::make_pair(false, 0.);
 					}
 
 					if(iRecycleNeutrons == 2)
@@ -327,7 +362,7 @@ void ConvoDlg::StartSim1D(bool bForceDeferred, unsigned int seed)
 					for(const ublas::vector<t_real>& vecHKLE : vecNeutrons)
 					{
 						if(this->StopRequested())
-							return std::pair<bool, t_real>(false, 0.);
+							return std::make_pair(false, 0.);
 
 						dS += (*m_pSqw)(vecHKLE[0], vecHKLE[1], vecHKLE[2], vecHKLE[3]);
 
@@ -346,7 +381,7 @@ void ConvoDlg::StartSim1D(bool bForceDeferred, unsigned int seed)
 					// scale factor
 					dS *= localreso.GetResoResults().dR0 * localreso.GetR0Scale();
 				}
-				return std::pair<bool, t_real>(true, dS);
+				return std::make_pair(true, dS);
 			});
 		}
 
@@ -366,7 +401,11 @@ void ConvoDlg::StartSim1D(bool bForceDeferred, unsigned int seed)
 			}
 
 			std::pair<bool, t_real> pairS = fut.get();
-			if(!pairS.first) break;
+
+			// invalid point (e.g. not in scattering plane)?
+			if(!pairS.first)
+				break;
+
 			t_real dS = pairS.second;
 			if(tl::is_nan_or_inf(dS))
 			{
@@ -458,26 +497,26 @@ void ConvoDlg::StartSim1D(bool bForceDeferred, unsigned int seed)
 				}
 			}
 
-			QMetaObject::invokeMethod(progress, "setValue", Q_ARG(int, iStep+1));
+			QMetaObject::invokeMethod(progress, "setValue", Q_ARG(int, iStep + 1));
 			QMetaObject::invokeMethod(editStopTime, "setText",
-				Q_ARG(const QString&, QString(watch.GetEstStopTimeStr(t_real(iStep+1)/t_real(iNumSteps)).c_str())));
+				Q_ARG(const QString&, QString(watch.GetEstStopTimeStr(t_real(iStep + 1)/t_real(iNumSteps)).c_str())));
 			++iStep;
 		}
 
 
 		// approximate chi^2
-		if(bUseScan && m_pSqw)
+		if(bUseScan && m_pSqw && iStep == iNumSteps)
 		{
 			const std::size_t iNumScanPts = m_scan.vecPoints.size();
 			std::vector<t_real> vecSFuncY;
 			vecSFuncY.reserve(iNumScanPts);
 
+			bool chi2_ok = true;
 			for(std::size_t iScanPt = 0; iScanPt < iNumScanPts; ++iScanPt)
 			{
 				const ScanPoint& pt = m_scan.vecPoints[iScanPt];
 				t_real E = pt.E / tl::one_meV;
 				ublas::vector<t_real> vecScanHKLE = tl::make_vec({ pt.h, pt.k, pt.l, E });
-
 
 				// find point on S(Q,E) curve closest to scan point
 				std::size_t iMinIdx = 0;
@@ -496,17 +535,32 @@ void ConvoDlg::StartSim1D(bool bForceDeferred, unsigned int seed)
 				}
 
 				// add the scaled S value from the closest point
+				if(iMinIdx >= m_vecScaledS.size())
+				{
+					tl::log_err("Invalid index ", iMinIdx, " in chi^2 calculation. ",
+						"Number of points: ", m_vecScaledS.size(), ".");
+					chi2_ok = false;
+					break;
+				}
 				vecSFuncY.push_back(m_vecScaledS[iMinIdx]);
 			}
 
-			m_chi2 = tl::chi2_direct<t_real>(iNumScanPts,
-				vecSFuncY.data(), m_scan.vecCts.data(), m_scan.vecCtsErr.data());
-			tl::log_info("chi^2 = ", m_chi2);
-
-			if(strAutosave != "")
+			if(chi2_ok)
 			{
-				std::ofstream ofstrAutosave(strAutosave, std::ios_base::app);
-				ofstrAutosave << "# chi^2: " << m_chi2 << std::endl;
+				m_chi2 = tl::chi2_direct<t_real>(iNumScanPts,
+					vecSFuncY.data(), m_scan.vecCts.data(), m_scan.vecCtsErr.data());
+				tl::log_info("chi^2 = ", m_chi2, ".");
+
+				if(strAutosave != "")
+				{
+					std::ofstream ofstrAutosave(strAutosave, std::ios_base::app);
+					ofstrAutosave << "# chi^2: " << m_chi2 << std::endl;
+				}
+			}
+			else
+			{
+				m_chi2 = -1.;
+				tl::log_info("Error: chi^2.");
 			}
 		}
 
@@ -721,7 +775,7 @@ void ConvoDlg::StartSim2D(bool bForceDeferred, unsigned int seed)
 		// -------------------------------------------------------------------------
 
 
-		reso.SetAlgo(ResoAlgo(comboAlgo->currentIndex()+1));
+		reso.SetAlgo(GetSelectedAlgo());
 		reso.SetKiFix(comboFixedK->currentIndex() == 0);
 		reso.SetKFix(spinKfix->value());
 		reso.SetOptimalFocus(get_reso_focus(comboFocMono->currentIndex(), comboFocAna->currentIndex()));
@@ -816,7 +870,7 @@ void ConvoDlg::StartSim2D(bool bForceDeferred, unsigned int seed)
 				-> std::pair<bool, t_real>
 			{
 				if(this->StopRequested())
-					return std::pair<bool, t_real>(false, 0.);
+					return std::make_pair(false, 0.);
 
 				t_real dS = 0.;
 				t_real dhklE_mean[4] = { 0., 0., 0., 0. };
@@ -840,13 +894,14 @@ void ConvoDlg::StartSim2D(bool bForceDeferred, unsigned int seed)
 							ostrErr << "Invalid crystal position: ("
 								<< dCurH << " " << dCurK << " " << dCurL << ") rlu, "
 								<< dCurE << " meV.";
-							throw tl::Err(ostrErr.str().c_str());
+							tl::log_err(ostrErr.str());
+							return std::make_pair(false, 0.);
 						}
 					}
 					catch(const std::exception& ex)
 					{
 						tl::log_err(ex.what());
-						return std::pair<bool, t_real>(false, 0.);
+						return std::make_pair(false, 0.);
 					}
 
 					if(iRecycleNeutrons == 2)
@@ -856,7 +911,7 @@ void ConvoDlg::StartSim2D(bool bForceDeferred, unsigned int seed)
 					for(const ublas::vector<t_real>& vecHKLE : vecNeutrons)
 					{
 						if(this->StopRequested())
-							return std::pair<bool, t_real>(false, 0.);
+							return std::make_pair(false, 0.);
 
 						dS += (*m_pSqw)(vecHKLE[0], vecHKLE[1], vecHKLE[2], vecHKLE[3]);
 
@@ -875,7 +930,7 @@ void ConvoDlg::StartSim2D(bool bForceDeferred, unsigned int seed)
 					// scale factor
 					dS *= localreso.GetResoResults().dR0 * localreso.GetR0Scale();
 				}
-				return std::pair<bool, t_real>(true, dS);
+				return std::make_pair(true, dS);
 			});
 		}
 
@@ -895,7 +950,11 @@ void ConvoDlg::StartSim2D(bool bForceDeferred, unsigned int seed)
 			}
 
 			std::pair<bool, t_real> pairS = fut.get();
-			if(!pairS.first) break;
+
+			// invalid point (e.g. not in scattering plane)?
+			if(!pairS.first)
+				break;
+
 			t_real dS = pairS.second;
 			if(tl::is_nan_or_inf(dS))
 			{

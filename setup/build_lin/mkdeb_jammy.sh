@@ -48,7 +48,7 @@ mkdir -p ${INSTDIR}/DEBIAN
 
 
 # control file
-echo -e "Package: takin\nVersion: 2.8.1" > ${INSTDIR}/DEBIAN/control
+echo -e "Package: takin\nVersion: 2.8.5" > ${INSTDIR}/DEBIAN/control
 echo -e "Description: inelastic neutron scattering software" >> ${INSTDIR}/DEBIAN/control
 echo -e "Maintainer: n/a" >> ${INSTDIR}/DEBIAN/control
 echo -e "Architecture: $(dpkg --print-architecture)" >> ${INSTDIR}/DEBIAN/control
@@ -99,6 +99,10 @@ cp -rv data/demos		${INSTDIR}/usr/local/share/takin
 cp -rv data/samples		${INSTDIR}/usr/local/share/takin
 cp -rv data/instruments		${INSTDIR}/usr/local/share/takin
 cp -v *.txt			${INSTDIR}/usr/local/share/takin
+cp -v ../LICENSE		${INSTDIR}/usr/local/share/takin/LICENSE.txt
+cp -v ../LICENSES		${INSTDIR}/usr/local/share/takin/LICENSES.txt
+cp -v ../LITERATURE		${INSTDIR}/usr/local/share/takin/LITERATURE.txt
+cp -v ../AUTHORS		${INSTDIR}/usr/local/share/takin/AUTHORS.txt
 cp -rv 3rdparty_licenses/*	${INSTDIR}/usr/local/share/takin/3rdparty_licenses/
 cp -v ../setup/build_lin/takin.desktop	${INSTDIR}/usr/share/applications
 cp -v /usr/local/lib/libMinuit2.so	${INSTDIR}/usr/local/lib
@@ -121,6 +125,7 @@ popd
 
 
 # copy external programs
+cp -v bin/magpie		${INSTDIR}/usr/local/bin
 cp -v bin/takin_cif2xml		${INSTDIR}/usr/local/bin
 cp -v bin/takin_findsg		${INSTDIR}/usr/local/bin
 cp -v bin/takin_bz		${INSTDIR}/usr/local/bin
@@ -128,7 +133,6 @@ cp -v bin/takin_structfact	${INSTDIR}/usr/local/bin
 cp -v bin/takin_magstructfact	${INSTDIR}/usr/local/bin
 cp -v bin/takin_scanbrowser	${INSTDIR}/usr/local/bin
 cp -v bin/takin_magsgbrowser	${INSTDIR}/usr/local/bin
-cp -v bin/takin_magdyn		${INSTDIR}/usr/local/bin
 cp -v bin/takin_moldyn		${INSTDIR}/usr/local/bin
 
 

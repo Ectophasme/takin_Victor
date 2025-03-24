@@ -35,7 +35,7 @@ setup_buildenv=1
 setup_externals=1
 build_externals=1
 build_takin=1
-build_takin2=1
+build_magpie=1
 build_plugins=1
 build_package=1
 
@@ -100,6 +100,10 @@ if [ $setup_externals -ne 0 ]; then
 	echo -e "Getting external dependencies..."
 	echo -e "================================================================================\n"
 
+	if ! ./setup/externals/setup_modules.sh; then
+		exit -1
+	fi
+
 	pushd "${TAKIN_ROOT}/core"
 		if ! ../setup/externals/setup_externals.sh; then
 			exit -1
@@ -108,18 +112,12 @@ if [ $setup_externals -ne 0 ]; then
 			exit -1
 		fi
 	popd
-
-	pushd "${TAKIN_ROOT}/mag-core"
-		if ! ../setup/externals/setup_externals_mag.sh; then
-			exit -1
-		fi
-	popd
 fi
 
 
 if [ $build_externals -ne 0 ]; then
 	echo -e "\n================================================================================"
-	echo -e "Building external libraries (Minuit, Qhull)..."
+	echo -e "Building external libraries..."
 	echo -e "================================================================================\n"
 
 	pushd "${TAKIN_ROOT}/tmp"
@@ -136,10 +134,9 @@ if [ $build_externals -ne 0 ]; then
 		if ! "${TAKIN_ROOT}"/setup/externals/build_qcp.sh; then
 			exit -1
 		fi
-# no need to build gemmi, we're only using the headers
-#		if ! "${TAKIN_ROOT}"/setup/externals/build_gemmi.sh; then
-#			exit -1
-#		fi
+		if ! "${TAKIN_ROOT}"/setup/externals/build_gemmi.sh; then
+			exit -1
+		fi
 	popd
 fi
 
@@ -152,7 +149,7 @@ if [ $build_takin -ne 0 ]; then
 	pushd "${TAKIN_ROOT}/core"
 		../setup/build_general/clean.sh
 
-		if ! cmake -DDEBUG=False -B ${BUILD_DIR} . ; then
+		if ! cmake -DCMAKE_BUILD_TYPE=Release -DDEBUG=False -B ${BUILD_DIR} . ; then
 			echo -e "Failed configuring core package."
 			exit -1
 		fi
@@ -165,9 +162,9 @@ if [ $build_takin -ne 0 ]; then
 fi
 
 
-if [ $build_takin2 -ne 0 ]; then
+if [ $build_magpie -ne 0 ]; then
 	echo -e "\n================================================================================"
-	echo -e "Building Takin 2 tools..."
+	echo -e "Building Magpie tools..."
 	echo -e "================================================================================\n"
 
 	pushd "${TAKIN_ROOT}/mag-core"
@@ -186,12 +183,12 @@ if [ $build_takin2 -ne 0 ]; then
 		fi
 
 		# copy tools to Takin main dir
+		cp -v ${BUILD_DIR}/tools/magdyn/magpie "${TAKIN_ROOT}"/core/bin/
 		cp -v ${BUILD_DIR}/tools/cif2xml/takin_cif2xml "${TAKIN_ROOT}"/core/bin/
 		cp -v ${BUILD_DIR}/tools/cif2xml/takin_findsg "${TAKIN_ROOT}"/core/bin/
 		cp -v ${BUILD_DIR}/tools/bz/takin_bz "${TAKIN_ROOT}"/core/bin/
 		cp -v ${BUILD_DIR}/tools/structfact/takin_structfact "${TAKIN_ROOT}"/core/bin/
 		cp -v ${BUILD_DIR}/tools/magstructfact/takin_magstructfact "${TAKIN_ROOT}"/core/bin/
-		cp -v ${BUILD_DIR}/tools/magdyn/takin_magdyn "${TAKIN_ROOT}"/core/bin/
 		cp -v ${BUILD_DIR}/tools/scanbrowser/takin_scanbrowser "${TAKIN_ROOT}"/core/bin/
 		cp -v ${BUILD_DIR}/tools/magsgbrowser/takin_magsgbrowser "${TAKIN_ROOT}"/core/bin/
 		cp -v ${BUILD_DIR}/tools/moldyn/takin_moldyn "${TAKIN_ROOT}"/core/bin/

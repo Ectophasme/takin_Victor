@@ -1,12 +1,12 @@
 #
 # Takin
 # @author Tobias Weber <tobias.weber@tum.de>
-# @date 2013-2020
+# @date 2013-2025
 # @license GPLv2
 #
 # ----------------------------------------------------------------------------
 # Takin (inelastic neutron scattering software package)
-# Copyright (C) 2017-2021  Tobias WEBER (Institut Laue-Langevin (ILL),
+# Copyright (C) 2017-2025  Tobias WEBER (Institut Laue-Langevin (ILL),
 #                          Grenoble, France).
 # Copyright (C) 2013-2017  Tobias WEBER (Technische Universitaet Muenchen
 #                          (TUM), Garching, Germany).
@@ -160,7 +160,7 @@ if(USE_Py)
 endif()
 
 if(Python3_Interpreter_FOUND AND Python3_Development_FOUND)
-	list(APPEND BOOST_OPT_COMPS python3 python37 python38 python39 python310 python311 python312)
+	list(APPEND BOOST_OPT_COMPS python3 python310 python311 python312 python313)
 	set(Py_FOUND TRUE)
 else()
 	set(Py_FOUND FALSE)
@@ -181,18 +181,14 @@ find_package(HDF5 COMPONENTS CXX)
 if(Py_FOUND)
 	if(TARGET Boost::python3)
 		set(_BOOST_PY_TARGET Boost::python3)
+	elseif(TARGET Boost::python313)
+		set(_BOOST_PY_TARGET Boost::python313)
 	elseif(TARGET Boost::python312)
 		set(_BOOST_PY_TARGET Boost::python312)
 	elseif(TARGET Boost::python311)
 		set(_BOOST_PY_TARGET Boost::python311)
 	elseif(TARGET Boost::python310)
 		set(_BOOST_PY_TARGET Boost::python310)
-	elseif(TARGET Boost::python39)
-		set(_BOOST_PY_TARGET Boost::python39)
-	elseif(TARGET Boost::python38)
-		set(_BOOST_PY_TARGET Boost::python38)
-	elseif(TARGET Boost::python37)
-		set(_BOOST_PY_TARGET Boost::python37)
 	else()
 		message("Boost.Python not found.")
 		set(Py_FOUND FALSE)
@@ -460,7 +456,8 @@ add_executable(takin
 
 	# reso
 	tools/res/cn.cpp tools/res/pop.cpp tools/res/pop_cn.cpp
-	tools/res/eck.cpp tools/res/vio.cpp tools/res/simple.cpp
+	tools/res/eck.cpp tools/res/eck_ext.cpp
+	tools/res/vio.cpp tools/res/simple.cpp
 	tools/res/ResoDlg.cpp tools/res/ResoDlg_file.cpp
 	tools/res/res_cli.cpp
 
@@ -480,7 +477,7 @@ add_executable(takin
 	# convofit
 	tools/convofit/convofit.cpp tools/convofit/convofit_import.cpp
 	tools/convofit/model.cpp tools/convofit/scan.cpp
-	tools/convofit/convofit_cli.cpp
+	tools/convofit/convofit_cli.cpp tools/convofit/scanseries.cpp
 
 	# scanviewer
 	tools/scanviewer/scanviewer.cpp tools/scanviewer/scanviewer_fit.cpp
@@ -610,7 +607,8 @@ if(BUILD_EXT_TOOLS)
 	# -----------------------------------------------------------------------------
 	add_executable(takin_convofit
 		tools/res/cn.cpp tools/res/pop.cpp tools/res/pop_cn.cpp
-		tools/res/eck.cpp tools/res/vio.cpp
+		tools/res/eck.cpp tools/res/eck_ext.cpp
+		tools/res/vio.cpp
 		#tools/res/simple.cpp
 
 		tools/monteconvo/TASReso.cpp
