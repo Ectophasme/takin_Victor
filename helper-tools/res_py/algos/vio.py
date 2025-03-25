@@ -1,6 +1,6 @@
 #
 # TODO: implementation of the violini algo
-#
+# 
 #
 # @author Mecoli Victor <mecoli@ill.fr>
 # @date feb-2025
@@ -30,13 +30,13 @@
 # ----------------------------------------------------------------------------
 #
 
-import libs.tas as tas
-import libs.helpers as helpers
-
-import algos.vio_cov as vio_cov
-
 import numpy as np
 import numpy.linalg as la
+import reso
+import tas
+import helpers
+import vio_cov
+import cr_json as js
 
 
 #
@@ -45,83 +45,58 @@ import numpy.linalg as la
 
 # Qup = Qz
 
-
-
 def calc(param):
     # Storage of informations
     verbose = param["verbose"]
     # Normes of ki, kf and Q
-    ki = param["ki"]
-    kf = param["kf"]
-    Q = param["Q"]
-    ###########################################################################################
-    if(verbose):
-        print("ki =", ki, "; kf =", kf, "; Q =", Q)
-
+    ki, kf, Q = param["ki"], param["kf"], param["Q"]
     # Shape of the detector
     det_shape = param["det_shape"]
-    ###########################################################################################
-    if(verbose):
-        print("det_shape =", det_shape)
-
+    if det_shape not in ('SPHERE', 'VCYL', 'HCYL'):
+        print("this shape is not taken in account")
+        return None
     # Velocity in m/s
-    vi = vio_cov.k2v(ki)
-    vf = vio_cov.k2v(kf)
-    ###########################################################################################
-    if(verbose):
-        print("vi =", vi, "; vf =", vf)
-
+    vi, vf = vio_cov.k2v(ki), vio_cov.k2v(kf)
     # Angles
-    theta_i = param["angles"][0]
-    phi_i = param["angles"][2]
-    theta_f = param["angles"][4]
-    phi_f = 0
+    theta_i, phi_i, theta_f, phi_f = param["angles"][0], param["angles"][2], param["angles"][4], 0
     if(det_shape == 'SPHERE'):
         phi_f = param["angles"][6]
     if(det_shape == 'HCYL'):
-        phi_f = np.rad2deg( np.arctan( np.divide(param["dist_SD"][0], param["dist_SD"][2]) ) )
+        phi_f = np.rad2deg( np.atan( np.divide(param["dist_SD"][0], param["dist_SD"][2]) ) )
     if(det_shape == 'VCYL'):
-        phi_f = np.rad2deg( np.arctan( np.divide(param["dist_SD"][2], param["dist_SD"][0]) ) )
-    ###########################################################################################
-    if(verbose):
-        print("theta_i =", theta_i, "; phi_i =", phi_i,"; theta_f =", theta_f, "; phi_f =", phi_f)
+        phi_f = np.rad2deg( np.atan( np.divide(param["dist_SD"][2], param["dist_SD"][0]) ) )
 
-    ki_xy = ki*np.cos(np.deg2rad(phi_i))
-    ki_z = ki*np.sin(np.deg2rad(phi_i))
-    kf_xy = kf*np.cos(np.deg2rad(phi_f))
-    kf_z = kf*np.sin(np.deg2rad(phi_f))
+    ki_xy, ki_z, kf_xy, kf_z = ki*np.cos(np.deg2rad(phi_i)), ki*np.sin(np.deg2rad(phi_i)), kf*np.cos(np.deg2rad(phi_f)), kf*np.sin(np.deg2rad(phi_f))
     Q_x = ki_xy*np.cos(np.deg2rad(theta_i)) - kf_xy*np.cos(np.deg2rad(theta_f))
     Q_y = ki_xy*np.sin(np.deg2rad(theta_i)) - kf_xy*np.sin(np.deg2rad(theta_f))
     Q_z = ki_z - kf_z
     Q_xy = np.sqrt( np.square(Q_x) + np.square(Q_y) )
-    ###########################################################################################
-    if(verbose):
-        print("ki_xy =", ki_xy, "; ki_z =", ki_z,"; kf_xy =", kf_xy, "; kf_z =", kf_z, "; Q_x =", Q_x, "; Q_y =", Q_y, "; Q_xy =", Q_xy, "; Q_z =", Q_z)
-
     # Information on the instrument
     dict_geo = {"dist_PM":param["dist_PM"], "dist_MS":param["dist_MS"], "dist_SD":param["dist_SD"], "angles":param["angles"], "delta_time_detector":param["delta_time_det"]}
     dict_choppers = {"chopperP":param["chopperP"], "chopperM":param["chopperM"]}
     ###########################################################################################
     if(verbose):
+        print("ki =", ki, "; kf =", kf, "; Q =", Q)
+        print("det_shape =", det_shape)
+        print("vi =", vi, "; vf =", vf)
+        print("theta_i =", theta_i, "; phi_i =", phi_i,"; theta_f =", theta_f, "; phi_f =", phi_f)
+        print("ki_xy =", ki_xy, "; ki_z =", ki_z,"; kf_xy =", kf_xy, "; kf_z =", kf_z, "; Q_x =", Q_x, "; Q_y =", Q_y, "; Q_xy =", Q_xy, "; Q_z =", Q_z)
         print("\ndict_geo =", dict_geo, "\ndict_choppers =", dict_choppers, "\n")
 
     # Energy transfer, Q vector and Covariance matrix
     E = tas.get_E(ki, kf)
     vec_Q = np.array([Q_x, Q_y, Q_z])
-    covQhw = vio_cov.cov(dict_geo, dict_choppers, vi, vf, det_shape, 'SI', verbose)
+    covQhw = vio_cov.cov(dict_geo, dict_choppers, vi, vf, det_shape, verbose)
     covQhwInv = la.inv(covQhw)
-    ###########################################################################################
-    if(param["verbose"]):
-        print("E =", E, "; vec_Q =", vec_Q)
-        print("covQhw =", covQhw)
-        print("covQhwInv =", covQhwInv)
-
     # Going from ki, kf, Qz to Qpara, Qperp, Qz :
     Q_ki = tas.get_psi(ki_xy, kf_xy, Q_xy, param["sample_sense"])
     rot = helpers.rotation_matrix_nd(-Q_ki, 4)
     covQhwInv = np.dot(rot.T, np.dot(covQhwInv, rot))
     ###########################################################################################
     if(verbose):
+        print("E =", E, "; vec_Q =", vec_Q)
+        print("covQhw =", covQhw)
+        print("covQhwInv =", covQhwInv)
         print("In the base (Qpara, Qperp, Qz) :")
         print("rot =", rot,'\ncovQhwInv =', covQhwInv)
 
