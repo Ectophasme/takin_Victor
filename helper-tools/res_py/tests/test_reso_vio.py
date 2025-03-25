@@ -1,11 +1,9 @@
 #
-# A little script to create and read .json files to store informations of instruments
+# tests the resolution calculation
 #
-# @author Mecoli Victor <mecoli@ill.fr>
+# @author Mecoli Victor <mecoli.ill.fr>
 # @date feb-2025
 # @license GPLv2
-#
-# @desc for algorithm: [vio14] N. Violini et al., NIM A 736 (2014) pp. 31-39, doi: 10.1016/j.nima.2013.10.042
 #
 # ----------------------------------------------------------------------------
 # Takin (inelastic neutron scattering software package)
@@ -29,18 +27,36 @@
 # ----------------------------------------------------------------------------
 #
 
-import json
+import sys
+import os
+sys.path.append(os.path.dirname(__file__) + "/..")
+
+import libs.reso as reso
+import algos.vio as vio
+import instruments.params_in5 as in5
+
 import numpy as np
 
-def create(param, path):
-    """param is a dictionnary, path is where to save"""
-    file_json = path + '.json'
-    with open(file_json, 'w') as file:
-        json.dump(param, file, indent=4)
 
-def read(path):
-    """path is where the .json file is"""
-    with open(path, 'r', encoding='utf-8') as file:
-        param = json.load(file)
-    return param
+np.set_printoptions(floatmode = "fixed",  precision = 4)
 
+reso_method = "vio"    # "vio", "eck", "pop", or "cn"
+verbose = True
+params = in5.params
+
+# calculate resolution
+res = vio.calc(params)
+if not res["ok"]:
+    print("RESOLUTION CALCULATION FAILED!")
+    exit(-1)
+
+if(verbose and reso_method != "vio"):
+    print("R0 = %g, Vol = %g" % (res["r0"], res["res_vol"]))
+    print("Resolution matrix:\n%s" % res["reso"])
+    print("Resolution vector: %s" % res["reso_v"])
+    print("Resolution scalar: %g" % res["reso_s"])
+
+
+# describe and plot ellipses
+ellipses = reso.calc_ellipses(res["reso"], verbose = verbose)
+reso.plot_ellipses(ellipses, verbose = verbose)

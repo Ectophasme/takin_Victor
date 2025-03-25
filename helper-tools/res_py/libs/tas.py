@@ -141,7 +141,7 @@ def get_monok(theta, d):
 
 # -----------------------------------------------------------------------------
 #
-# scattering angle a4
+# sample scattering angle a4
 #
 def get_scattering_angle(ki, kf, Q):
     c = (ki**2. + kf**2. - Q**2.) / (2.*ki*kf)
@@ -226,7 +226,7 @@ def get_UB(B, orient1_rlu, orient2_rlu, orientup_rlu):
 # a3 sample rotation & a4 sample scattering angles
 # see https://dx.doi.org/10.1107/S0021889805004875
 #
-def get_sample_angle(ki, kf, Q_rlu, orient_rlu, orient_up_rlu, B, sense_sample=1., a3_offs=np.pi):
+def get_sample_angle(ki, kf, Q_rlu, orient_rlu, orient_up_rlu, B, sense_sample = 1., a3_offs = np.pi):
     metric = get_metric(B)
     #print("Metric: " + str(metric))
 
@@ -257,7 +257,7 @@ def get_sample_angle(ki, kf, Q_rlu, orient_rlu, orient_up_rlu, B, sense_sample=1
 # (hkl) position
 # see https://dx.doi.org/10.1107/S0021889805004875
 #
-def get_hkl(ki, kf, a3, Qlen, orient_rlu, orient_up_rlu, B, sense_sample=1., a3_offs=np.pi):
+def get_hkl(ki, kf, a3, Qlen, orient_rlu, orient_up_rlu, B, sense_sample = 1., a3_offs = np.pi):
     B_inv = la.inv(B)
 
     # angle enclosed by ki and Q
@@ -489,9 +489,16 @@ class TasGUI:
             Qlen = get_Q(ki, kf, a4)
             Q_in_plane = np.abs(dist_Q_plane) < self.g_eps
 
+            kiQ = get_psi(ki, kf, Qlen, sense_sample)
+            kfQ = get_eta(ki, kf, Qlen, sense_sample)
+
             self.editA3.setText("%.6g" % (a3 / np.pi * 180.))
             self.editA4.setText("%.6g" % (a4 / np.pi * 180.))
             self.editQAbs.setText("%.6g" % Qlen)
+
+            self.editkiQ.setText("%.6g" % (kiQ / np.pi * 180.))
+            self.editkfQ.setText("%.6g" % (kfQ / np.pi * 180.))
+
             if Q_in_plane:
                 self.tasstatus.setText("")
             else:
@@ -506,6 +513,10 @@ class TasGUI:
                 self.editA3.setText("invalid")
                 self.editA4.setText("invalid")
                 self.editQAbs.setText("invalid")
+            if np.isnan(kiQ):
+                self.editkiQ.setText("invalid")
+            if np.isnan(kfQ):
+                self.editkfQ.setText("invalid")
         except (ArithmeticError, la.LinAlgError) as err:
             self.editA3.setText("invalid")
             self.editA4.setText("invalid")
@@ -804,6 +815,10 @@ class TasGUI:
         self.editA4 = qtw.QLineEdit(taspanel)
         self.editA5 = qtw.QLineEdit(taspanel)
         self.editA6 = qtw.QLineEdit(taspanel)
+        self.editkiQ = qtw.QLineEdit(taspanel)
+        self.editkfQ = qtw.QLineEdit(taspanel)
+        self.editkiQ.setReadOnly(True)
+        self.editkfQ.setReadOnly(True)
 
         self.comboA3 = qtw.QComboBox(taspanel)
         self.checkA4Sense = qtw.QCheckBox(taspanel)
@@ -892,21 +907,25 @@ class TasGUI:
         taslayout.addWidget(qtw.QLabel("a5, a6 (deg):", taspanel), 9,0, 1,1)
         taslayout.addWidget(self.editA5, 9,1, 1,1)
         taslayout.addWidget(self.editA6, 9,2, 1,1)
+        taslayout.addWidget(qtw.QLabel("\u2220kiQ, \u2220kfQ (deg):", taspanel), 10,0, 1,1)
+        taslayout.addWidget(self.editkiQ, 10,1, 1,1)
+        taslayout.addWidget(self.editkfQ, 10,2, 1,1)
 
-        taslayout.addWidget(separatorTas2, 10,0, 1,3)
+        taslayout.addWidget(separatorTas2, 11,0, 1,3)
 
-        taslayout.addWidget(qtw.QLabel("a3 Convention:", taspanel), 11,0, 1,1)
-        taslayout.addWidget(self.comboA3, 11,1, 1,1)
+        taslayout.addWidget(qtw.QLabel("a3 Convention:", taspanel), 12,0, 1,1)
+        taslayout.addWidget(self.comboA3, 12,1, 1,1)
 
-        taslayout.addWidget(qtw.QLabel("a4 Sense:", taspanel), 12,0, 1,1)
-        taslayout.addWidget(self.checkA4Sense, 12,1, 1,2)
+        taslayout.addWidget(qtw.QLabel("a4 Sense:", taspanel), 13,0, 1,1)
+        taslayout.addWidget(self.checkA4Sense, 13,1, 1,2)
 
-        taslayout.addWidget(separatorTas3, 13,0, 1,3)
-        taslayout.addWidget(qtw.QLabel(u"Mono., Ana. d (\u212b):", taspanel), 14,0, 1,1)
-        taslayout.addWidget(self.editDm, 14,1, 1,1)
-        taslayout.addWidget(self.editDa, 14,2, 1,1)
+        taslayout.addWidget(separatorTas3, 14,0, 1,3)
 
-        taslayout.addItem(qtw.QSpacerItem(16,16, policy_min, policy_exp), 15,0, 1,3)
+        taslayout.addWidget(qtw.QLabel(u"Mono., Ana. d (\u212b):", taspanel), 15,0, 1,1)
+        taslayout.addWidget(self.editDm, 15,1, 1,1)
+        taslayout.addWidget(self.editDa, 15,2, 1,1)
+
+        taslayout.addItem(qtw.QSpacerItem(16,16, policy_min, policy_exp), 16,0, 1,3)
         taslayout.addWidget(self.tasstatus, 16,0, 1,3)
 
         tabs.addTab(taspanel, "TAS")

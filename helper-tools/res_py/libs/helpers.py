@@ -11,7 +11,7 @@
 #
 # ----------------------------------------------------------------------------
 # Takin (inelastic neutron scattering software package)
-# Copyright (C) 2017-2024  Tobias WEBER (Institut Laue-Langevin (ILL),
+# Copyright (C) 2017-2025  Tobias WEBER (Institut Laue-Langevin (ILL),
 #                          Grenoble, France).
 # Copyright (C) 2013-2017  Tobias WEBER (Technische Universitaet Muenchen
 #                          (TUM), Garching, Germany).
@@ -31,6 +31,8 @@
 # ----------------------------------------------------------------------------
 #
 
+import libs.tas as tas
+
 import numpy as np
 import numpy.linalg as la
 
@@ -49,7 +51,7 @@ deg2rad = np.pi / 180.
 
 
 #--------------------------------------------------------------------------
-# helpers
+# general helper functions
 #--------------------------------------------------------------------------
 #
 # x rotation matrix
@@ -149,4 +151,81 @@ def adjugate(mat):
 
     return np.transpose(adj)
 
+
+#
+# orthonormalise a given system
+# see e.g.
+#    - https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process
+#    - (Arens 2015), p. 744
+#
+def orthonormalise(mat):
+    order = len(mat)
+    mat_new = mat
+
+    for idx in range(order):
+        for idx2 in range(idx):
+            # remove projections onto row vector with index 2
+            len_sq = np.dot(mat_new[idx2, :], mat_new[idx2, :])
+            proj = np.dot(mat[idx, :], mat_new[idx2, :]) / len_sq
+            mat_new[idx, :] -= np.dot(proj, mat_new[idx2, :])
+
+        # normalise
+        mat_new[idx, :] /= la.norm(mat_new[idx, :])
+
+    return mat_new
+
+#--------------------------------------------------------------------------
+
+
+
+#--------------------------------------------------------------------------
+# scattering triangle calculations
+#--------------------------------------------------------------------------
+def calc_triangle(param, eps = 1e-4):
+    ki = param["ki"]
+    kf = param["kf"]
+    Q = param["Q"]
+
+    # is Q given as (hkl) vector in rlu?
+    if isinstance(Q, type([])) or isinstance(Q, type(np.array([]))):
+        Q_rlu = param["Q"]
+        orient_rlu = param["sample_plane_1"]
+        B = tas.get_B(param["sample_lattice"], param["sample_angles"])
+        orient_up_rlu = tas.cross(orient_rlu, param["sample_plane_2"], B)
+
+        [a3, a4, dist_Q_plane] = tas.get_sample_angle(ki, kf, Q_rlu, orient_rlu, orient_up_rlu, B)
+        param["theta"] = a3
+        Q = param["Q"] = tas.get_Q(ki, kf, a4)
+
+        if np.abs(dist_Q_plane) > eps:
+            raise Warning("Q is not in the scattering plane.")
+
+        param["sample_orient"] = orthonormalise(
+            np.array([
+                np.dot(B, orient_rlu),
+                np.dot(B, param["sample_plane_2"]),
+                np.dot(B, orient_up_rlu)
+            ]))
+
+        if param["verbose"]:
+            print("Q = %g / A, theta = %g deg." % (Q, a3*rad2deg))
+            print("Scattering plane orthonormal system [1/A]:\n%s" % param["sample_orient"])
+
+    # is Q given as a scalar in 1/A?
+    else:
+        param["theta"] = 0.
+        param["sample_orient"] = np.eye(3)
+
+    # angles
+    param["twotheta"] = tas.get_scattering_angle(ki, kf, Q) * param["sample_sense"]
+    param["thetam"] = tas.get_mono_angle(ki, param["mono_xtal_d"], True) * param["mono_sense"]
+    param["thetaa"] = tas.get_mono_angle(kf, param["ana_xtal_d"], True) * param["ana_sense"]
+    param["Q_ki"] = tas.get_psi(ki, kf, Q, param["sample_sense"])
+    param["Q_kf"] = tas.get_eta(ki, kf, Q, param["sample_sense"])
+
+    if param["verbose"]:
+        print("2theta = %g deg, thetam = %g deg, thetaa = %g deg, Q_ki = %g deg, Q_kf = %g deg.\n" % (
+            param["twotheta"] * rad2deg,
+            param["thetam"] * rad2deg, param["thetaa"] * rad2deg,
+            param["Q_ki"] * rad2deg, param["Q_kf"] * rad2deg))
 #--------------------------------------------------------------------------
