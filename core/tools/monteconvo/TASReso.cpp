@@ -233,23 +233,23 @@ bool TASReso::LoadRes(const char* pcXmlFile)
 	}
 
 
-	if(xml.Query<int>((strXmlRoot + "reso/use_ki3").c_str(), /*1*/ 0))
+	if(xml.Query<int>((strXmlRoot + "reso/use_ki3").c_str(), 0))
 		m_reso.flags |= CALC_KI3;
 	else
 		m_reso.flags &= ~CALC_KI3;
-	if(xml.Query<int>((strXmlRoot + "reso/use_kf3").c_str(), /*1*/ 0))
+	if(xml.Query<int>((strXmlRoot + "reso/use_kf3").c_str(), 0))
 		m_reso.flags |= CALC_KF3;
 	else
 		m_reso.flags &= ~CALC_KF3;
-	if(xml.Query<int>((strXmlRoot + "reso/use_kfki").c_str(), /*1*/ 0))
+	if(xml.Query<int>((strXmlRoot + "reso/use_kfki").c_str(), 0))
 		m_reso.flags |= CALC_KFKI;
 	else
 		m_reso.flags &= ~CALC_KFKI;
-	if(xml.Query<int>((strXmlRoot + "reso/use_monki").c_str(), /*1*/ 0))
+	if(xml.Query<int>((strXmlRoot + "reso/use_monki").c_str(), 0))
 		m_reso.flags |= CALC_MONKI;
 	else
 		m_reso.flags &= ~CALC_MONKI;
-	if(xml.Query<int>((strXmlRoot + "reso/use_mon").c_str(), /*1*/ 0))
+	if(xml.Query<int>((strXmlRoot + "reso/use_mon").c_str(), 0))
 		m_reso.flags |= CALC_MON;
 	else
 		m_reso.flags &= ~CALC_MON;
@@ -257,6 +257,10 @@ bool TASReso::LoadRes(const char* pcXmlFile)
 		m_reso.flags |= CALC_GENERAL_R0;
 	else
 		m_reso.flags &= ~CALC_GENERAL_R0;
+	if(xml.Query<int>((strXmlRoot + "reso/use_samplevol").c_str(), 0))
+		m_reso.flags |= NORM_TO_SAMPLE;
+	else
+		m_reso.flags &= ~NORM_TO_SAMPLE;
 	//if(xml.Query<int>((strXmlRoot + "reso/use_resvol").c_str(), 0))
 	//	m_reso.flags |= CALC_RESVOL;
 	//else
@@ -315,8 +319,10 @@ bool TASReso::LoadRes(const char* pcXmlFile)
 	m_reso.dist_vsrc_mono = xml.Query<t_real>((strXmlRoot + "reso/pop_dist_vsrc_mono").c_str(), m_reso.dist_vsrc_mono/cm)*cm;
 	m_reso.dist_hsrc_mono = xml.Query<t_real>((strXmlRoot + "reso/pop_dist_hsrc_mono").c_str(), m_reso.dist_hsrc_mono/cm)*cm;
 
+	m_reso.bMonitorRect = (xml.Query<int>((strXmlRoot + "reso/pop_monitor_rect").c_str(), 1) != 0);
 	m_reso.monitor_w = xml.Query<t_real>((strXmlRoot + "reso/pop_monitor_w").c_str(), 0.)*cm;
 	m_reso.monitor_h = xml.Query<t_real>((strXmlRoot + "reso/pop_monitor_h").c_str(), 0.)*cm;
+	m_reso.monitor_thick = xml.Query<t_real>((strXmlRoot + "reso/pop_monitor_thick").c_str(), 0.)*cm;
 	m_reso.dist_mono_monitor = xml.Query<t_real>((strXmlRoot + "reso/pop_dist_mono_monitor").c_str(), 0.)*cm;
 
 

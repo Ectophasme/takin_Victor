@@ -345,7 +345,7 @@ def calc(param):
 
     # --------------------------------------------------------------------------
     # integrate last 2 vars -> equs. 57 & 58 in [eck14]
-
+    # --------------------------------------------------------------------------
     U2 = reso.quadric_proj(U1, 5)
     # careful: factor -0.5*... missing in U matrix compared to normal gaussian!
     U = 2. * reso.quadric_proj(U2, 4)
@@ -370,94 +370,115 @@ def calc(param):
 
 
     # --------------------------------------------------------------------------
-    # include sample mosaic, see cn.cpp
+    # include sample mosaic, see also cn.cpp
+    # --------------------------------------------------------------------------
     mos_Q_sq = (param["sample_mosaic"] * Q)**2.
     mos_v_Q_sq = (param["sample_mosaic_v"] * Q)**2.
 
-    # sample mosaic, gives the same as equs. (3.3) and (7.7) in [end25]
+    # sample mosaic, gives the same as equs. 3.3 and 7.7 in [end25]
     M = np.delete(np.delete(U, 3, axis = 0), 3, axis = 1)
     M = np.delete(np.delete(M, 0, axis = 0), 0, axis = 1)
     M += np.diag([ helpers.sig2fwhm**2. / mos_Q_sq, helpers.sig2fwhm**2. / mos_v_Q_sq ])
-    Madj = helpers.adjugate(M)
+    #Madj = helpers.adjugate(M)
 
-    # before equ. 3.4 in [end25]
-    # TODO: this is based on the assumption that M is diagonal,
-    #       which it is not for vertical scattering in kf
+    # equs. 3.4 and 7.14 in [end25]
     R0 *= np.pi**2. / np.sqrt(la.det(M))
     R0 *= helpers.sig2fwhm / np.sqrt(2. * np.pi * mos_Q_sq * mos_v_Q_sq)
 
 
     #Uorg = np.copy(U)
-    Pvec1 = matP[1, 0:3] / helpers.sig2fwhm**2.
+    Pvec1 = matP[1, :] / helpers.sig2fwhm**2.
     Uvec1 = U[:, 1] / helpers.sig2fwhm**2.
+    Mnorm1 = 1./mos_Q_sq + U[1, 1]/helpers.sig2fwhm**2.
     # gives the same as equs. 3.5 and 7.8 in [end25]
-    matK -= 0.25 * helpers.sig2fwhm**2. * np.outer(Pvec1, Pvec1) / \
-        (1./mos_Q_sq + U[1, 1]/helpers.sig2fwhm**2.)
+    matK -= 0.25 * helpers.sig2fwhm**2. * np.outer(Pvec1, Pvec1) / Mnorm1
     # gives the same as equs. 3.7 and 7.10 in [end25]
-    matP -= helpers.sig2fwhm**2. * np.outer(Uvec1, Pvec1) / \
-        (1./mos_Q_sq + U[1, 1]/helpers.sig2fwhm**2.)
+    matP -= helpers.sig2fwhm**2. * np.outer(Uvec1, Pvec1) / Mnorm1
     # gives the same as equs. 3.6 and 7.9 in [end25]
-    U -= helpers.sig2fwhm**2. * np.outer(Uvec1, Uvec1) / \
-        (1./mos_Q_sq + U[1, 1]/helpers.sig2fwhm**2.)
+    U -= helpers.sig2fwhm**2. * np.outer(Uvec1, Uvec1) / Mnorm1
 
-    Pvec2 = matP[2, 0:3] / helpers.sig2fwhm**2.
+    Pvec2 = matP[2, :] / helpers.sig2fwhm**2.
     Uvec2 = U[:, 2] / helpers.sig2fwhm**2.
+    Mnorm2 = 1./mos_v_Q_sq + U[2, 2]/helpers.sig2fwhm**2.
     # gives the same as equs. 3.5 and 7.8 in [end25]
-    matK -= 0.25 * helpers.sig2fwhm**2. * np.outer(Pvec2, Pvec2) / \
-        (1./mos_v_Q_sq + U[2, 2]/helpers.sig2fwhm**2.)
+    matK -= 0.25 * helpers.sig2fwhm**2. * np.outer(Pvec2, Pvec2) / Mnorm2
     # gives the same as equs. 3.7 and 7.10 in [end25]
-    matP -= helpers.sig2fwhm**2. * np.outer(Uvec2, Pvec2) / \
-        (1./mos_v_Q_sq + U[2, 2]/helpers.sig2fwhm**2.)
+    matP -= helpers.sig2fwhm**2. * np.outer(Uvec2, Pvec2) / Mnorm2
     # gives the same as equs. 3.6 and 7.9 in [end25]
-    U -= helpers.sig2fwhm**2. * np.outer(Uvec2, Uvec2) / \
-        (1./mos_v_Q_sq + U[2, 2]/helpers.sig2fwhm**2.)
+    U -= helpers.sig2fwhm**2. * np.outer(Uvec2, Uvec2) / Mnorm2
     #print("Mosaic R0 scaling: %g" % (np.sqrt(la.det(Uorg) / la.det(U))))
     # --------------------------------------------------------------------------
 
 
     # --------------------------------------------------------------------------
+    # integrate over sample shape
+    # --------------------------------------------------------------------------
     sample_dims = np.array([ param["sample_d"], param["sample_w"], param["sample_h"] ])
 
-    # trafo for sample rotation, equ. 5.2 and below in [end25]
-    # TODO: columns have to be parallel to ki, perpendicular to ki and up
-    basis_ki = np.array([
-        [1., 0., 0.],
-        [0., 1., 0.],
-        [0., 0., 1.]])
+    if param["sample_int"] == "gaussian":
+        # TODO: check this
+        # trafo for sample rotation, equ. 5.2 and below in [end25]
+        basis_ki = np.transpose(param["sample_orient"])
 
-    # TODO: principal axes of sample
-    sample_axes = np.array([
-        [1., 0., 0.],
-        [0., 1., 0.],
-        [0., 0., 1.]])
+        # TODO: principal axes of sample
+        sample_axes = np.array([
+            [1., 0., 0.],
+            [0., 1., 0.],
+            [0., 0., 1.]])
 
-    T_E = np.dot(Dtheta, np.dot(basis_ki, sample_axes))
+        T_E = np.dot(Dtheta, np.dot(basis_ki, sample_axes))
 
-    if param["sample_shape"] == "ellipsoid":
-        # ellipsoid sample integration, equ. 4.4 and below in [end25]
-        matN = matK + 0.5 * (288. * np.pi)**(1./3.) * np.dot(
-            T_E, np.dot(np.diag(1. / sample_dims**2.), np.transpose(T_E)))
-    elif param["sample_shape"] == "cylindrical":
-        # cylindrical sample integration, equ. 6.3 in [end25]
-        matN = matK + np.dot(T_E, np.dot(np.diag(
-            [4./sample_dims[0]**2., 4./sample_dims[1]**2., np.pi/sample_dims[2]**2.]), np.transpose(T_E)))
-    elif param["sample_shape"] == "cuboid":
-        # cuboid sample integration, equ. 6.6 in [end25]
-        matN = matK + np.pi * np.dot(T_E, np.dot(np.diag(1. / sample_dims**2.), np.transpose(T_E)))
+        if param["sample_shape"] == "ellipsoid":
+            # ellipsoid sample integration, equ. 4.4 and below in [end25]
+            matN = matK + 0.5 * (288. * np.pi)**(1./3.) * np.dot(
+                T_E, np.dot(np.diag(1. / sample_dims**2.), np.transpose(T_E)))
+        elif param["sample_shape"] == "cylindrical":
+            # cylindrical sample integration, equ. 6.3 in [end25]
+            matN = matK + np.dot(T_E, np.dot(np.diag(
+                [4./sample_dims[0]**2., 4./sample_dims[1]**2., np.pi/sample_dims[2]**2.]), np.transpose(T_E)))
+        elif param["sample_shape"] == "cuboid":
+            # cuboid sample integration, equ. 6.6 in [end25]
+            matN = matK + np.pi * np.dot(T_E, np.dot(np.diag(1. / sample_dims**2.), np.transpose(T_E)))
+        else:
+            raise ValueError("ResPy: No valid sample shape given.")
+
+        detN = la.det(matN)
+        Nadj = helpers.adjugate(matN)
+
+        # page 9 and equs. 7.11, 7.12 and 7.13 in [end25]
+        U -= 0.25 / detN * np.dot(matP, np.dot(Nadj, np.transpose(matP)))
+        matP -= 1. / detN * np.dot(matP, np.dot(Nadj, matK))
+        matK -= 1. / detN * np.dot(matK, np.dot(Nadj, matK))
+
+        # page 9 in [end25]
+        R0 *= np.pi**3. / detN
+
+    elif param["sample_int"] == "analytical" and param["sample_shape"] == "cylindrical" and not param["kf_vert"]:
+        # TODO: check if this requires or excludes the sample mosaic calculations above
+
+        # equ. 8.2 in [end25]
+        matK_plane = matK[0:2, 0:2]
+        matK_plane_adj = helpers.adjugate(matK_plane)
+
+        # gives the same as equ. 8.3 in [end25]
+        [ evals, T_matK_plane ] = la.eig(matK_plane)
+
+        # equs. 8.9 - 8.11 in [end25]
+        for i in [ 0, 1, 3 ]:
+            for j in [ 0, 1, 3 ]:
+                s = np.dot(matP[i, 0:2], np.dot(matK_plane_adj, matP[j, 0:2]))
+                U[i, j] -= 0.25*s / la.det(matK_plane)
+        U[2, 2] -= 0.25*matP[2, 2]**2. / matK[2, 2]
+        U[0:2, 2] = U[2, 0:2] = U[3, 2] = U[2, 3] = 0.
+
+        # equs. 8.7 and 8.8 in [end25]
+        R0 /= la.det(matK)
+        # TODO: rest of R0 and vector reso_v
+
     else:
-        raise ValueError("ResPy: No valid sample shape given.")
+        raise ValueError("ResPy: No valid sample integration method given.")
 
-    detN = la.det(matN)
-    Nadj = helpers.adjugate(matN)
-
-    # page 9 and equs. (7.11), (7.12) and (7.13) in [end25]
-    U -= 0.25 / detN * np.dot(matP, np.dot(Nadj, np.transpose(matP)))
-    matP -= 1. / detN * np.dot(matP, np.dot(Nadj, matK))
-    matK -= 1. / detN * np.dot(matK, np.dot(Nadj, matK))
-
-    # page 9 in [end25]
-    R0 *= np.pi**3. / detN
-
+    # normalise R0
     if param["sample_shape"] == "cuboid":
         V_sample = sample_dims[0] * sample_dims[1] * sample_dims[2]
     elif param["sample_shape"] == "cylindrical":
@@ -469,6 +490,7 @@ def calc(param):
     # --------------------------------------------------------------------------
 
 
+    # --------------------------------------------------------------------------
     # quadratic part of quadric (matrix U)
     R = U
     # linear and constant part of quadric (V and W in [eck14], equ. 2.2 in [end25])

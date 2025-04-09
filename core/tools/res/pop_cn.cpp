@@ -99,15 +99,12 @@ ResoResults calc_pop_cn(const CNParams& pop)
 	res.Q_avg[2] = 0.;
 	res.Q_avg[3] = pop.E / meV;
 
-	length lam = tl::k2lam(pop.ki);
-
         // if the user moved the scattering angle to the other
         // side of the scattering sense indicated by the flag
         t_real manually_changed_sense = t_real(1);
         if(pop.twotheta/rads < t_real(0))
                 manually_changed_sense = t_real(-1);
 
-	angle twotheta = pop.twotheta * pop.dsample_sense;
 	angle thetaa = pop.thetaa * pop.dana_sense;
 	angle thetam = pop.thetam * pop.dmono_sense;
 	angle ki_Q = pop.angle_ki_Q * pop.dsample_sense * manually_changed_sense;
@@ -122,6 +119,7 @@ ResoResults calc_pop_cn(const CNParams& pop)
 
 	/*if(pop.bGuide)
 	{
+		length lam = tl::k2lam(pop.ki);
 		coll_h_pre_mono = lam*(pop.guide_div_h/angs);
 		coll_v_pre_mono = lam*(pop.guide_div_v/angs);
 	}*/
@@ -191,8 +189,6 @@ ResoResults calc_pop_cn(const CNParams& pop)
 	const t_real c_th_a = units::cos(thetaa);
 	const t_real cot_th_m = c_th_m / s_th_m;
 	const t_real cot_th_a = c_th_a / s_th_a;
-	const t_real s_th_s = units::sin(t_real(0.5)*twotheta);
-	const t_real c_th_s = units::cos(t_real(0.5)*twotheta);
 	const t_real sign_z = -1.;  // to compare with the calculations by F. Bourdarot
 
 	// A matrix, [pop75], Appendix 1
@@ -298,8 +294,10 @@ ResoResults calc_pop_cn(const CNParams& pop)
 	// this just corrects the resolution volume, which is already normalised in the MC step
 	//res.dR0 /= std::sqrt(std::abs(tl::determinant(cov) / tl::determinant(cov_nomosaic)));
 
+
 	// --------------------------------------------------------------------
 	// mono parts of the matrices, see: [zhe07], p. 10
+	// --------------------------------------------------------------------
 	t_mat G_mono_collis = G_collis;
 	G_mono_collis.resize(POP_PRESAMPLE_V+1, POP_PRESAMPLE_V+1, true);
 
@@ -313,6 +311,7 @@ ResoResults calc_pop_cn(const CNParams& pop)
 	//t_mat H_mono = H;
 	//H_mono.resize(POP_PRESAMPLE_V+1, POP_PRESAMPLE_V+1, true);
 	// --------------------------------------------------------------------
+
 
 	const t_real pi = tl::get_pi<t_real>();
 
