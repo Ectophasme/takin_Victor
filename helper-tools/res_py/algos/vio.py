@@ -38,7 +38,7 @@ import numpy as np
 import numpy.linalg as la
 import libs.tas as tas
 import libs.helpers as helpers
-import vio_cov
+import algos.vio_cov as vio_cov
 
 
 #
@@ -64,13 +64,13 @@ def calc(param):
     if(det_shape == 'SPHERE'):
         phi_f = param["angles"][6]
     if(det_shape == 'HCYL'):
-        phi_f = np.rad2deg( np.atan( np.divide(param["dist_SD"][0], param["dist_SD"][2]) ) )
+        phi_f = np.atan( np.divide(param["dist_SD"][0], param["dist_SD"][2]) )
     if(det_shape == 'VCYL'):
-        phi_f = np.rad2deg( np.atan( np.divide(param["dist_SD"][2], param["dist_SD"][0]) ) )
+        phi_f = np.atan( np.divide(param["dist_SD"][2], param["dist_SD"][0]) )
 
-    ki_xy, ki_z, kf_xy, kf_z = ki*np.cos(np.deg2rad(phi_i)), ki*np.sin(np.deg2rad(phi_i)), kf*np.cos(np.deg2rad(phi_f)), kf*np.sin(np.deg2rad(phi_f))
-    Q_x = ki_xy*np.cos(np.deg2rad(theta_i)) - kf_xy*np.cos(np.deg2rad(theta_f))
-    Q_y = ki_xy*np.sin(np.deg2rad(theta_i)) - kf_xy*np.sin(np.deg2rad(theta_f))
+    ki_xy, ki_z, kf_xy, kf_z = ki*np.cos(phi_i), ki*np.sin(phi_i), kf*np.cos(phi_f), kf*np.sin(phi_f)
+    Q_x = ki_xy*np.cos(theta_i) - kf_xy*np.cos(theta_f)
+    Q_y = ki_xy*np.sin(theta_i) - kf_xy*np.sin(theta_f)
     Q_z = ki_z - kf_z
     Q_xy = np.sqrt( np.square(Q_x) + np.square(Q_y) )
     # Information on the instrument
@@ -89,7 +89,7 @@ def calc(param):
     E = tas.get_E(ki, kf)
     vec_Q = np.array([Q_x, Q_y, Q_z])
     covQhw = vio_cov.cov(dict_geo, dict_choppers, vi, vf, det_shape, verbose)
-    covQhwInv = la.inv(covQhw)
+    covQhwInv = la.inv(np.divide(covQhw, helpers.sig2fwhm))
     # Going from ki, kf, Qz to Qpara, Qperp, Qz :
     Q_ki = tas.get_psi(ki_xy, kf_xy, Q_xy, param["sample_sense"])
     rot = helpers.rotation_matrix_nd(-Q_ki, 4)

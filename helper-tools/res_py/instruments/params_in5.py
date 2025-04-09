@@ -37,17 +37,17 @@ import numpy as np
 # Hypothesis : perfect collimation of the incomming beem, point sample
 IN5 = {
     "det_shape":"VCYL",
-    "L_chopP12":[149.8, 0.],            # [distance, delta]
-    "L_chopP2M1":[7800.6, 0.],           # [distance, delta]
-    "L_chopM12":[54.8, 0.],              # [distance, delta]
-    "L_chopM2S":[1229.5, 0.],            # [distance, delta]
-    "rad_det":[4000., 13],              # [distance, delta]
-    "theta_i":[0, 0], # [0., np.rad2deg(2.04e-3)],                 # [angle, delta]
-    "phi_i":[0, 0], # [0., np.rad2deg(1.25e-2)],                   # [angle, delta]
-    "delta_theta_f":np.rad2deg(3.25e-3),
-    "delta_z":10,
-    "prop_chopP":[9., 7000., 17000.],    # [window angle, min rot speed, max rot speed]
-    "prop_chopM":[3.25, 7000., 17000.],    # [window angle, min rot speed, max rot speed]
+    "L_chopP12":[149.8e7, 0.],            # [distance, delta]
+    "L_chopP2M1":[7800.6e7, 0.],           # [distance, delta]
+    "L_chopM12":[54.8e7, 0.],              # [distance, delta]
+    "L_chopM2S":[1229.5e7, 0.],            # [distance, delta]
+    "rad_det":[4000.e7, 26e7], #[4000.e7, 0],              # [distance, delta]
+    "theta_i":[0, 0], # [0., 2.04e-3],                 # [angle, delta]
+    "phi_i":[0, 0], # [0., 1.25e-2],                   # [angle, delta]
+    "delta_theta_f":6.5e-3, #0,
+    "delta_z":30e7, #0,
+    "prop_chopP":[np.deg2rad(9.), np.divide(7000.*np.pi, 30), np.divide(17000.*np.pi, 30)],    # [window angle, min rot speed, max rot speed]
+    "prop_chopM":[np.deg2rad(3.25), np.divide(7000.*np.pi, 30), np.divide(17000.*np.pi, 30)],    # [window angle, min rot speed, max rot speed]
     "delta_time_det":0
 }
 
@@ -57,9 +57,10 @@ ki = 2*np.pi/5  # 2.5
 kf = 2*np.pi/5
 Q = 1
 
-theta_f = np.rad2deg(tas.get_scattering_angle(ki, kf, Q))
-rot_speedP = 8500
-rot_speedM = 8500
+z = 0
+theta_f = tas.get_scattering_angle(ki, kf, Q) # ki, kf and Q because z = 0 so rotation in the xy plane
+rot_speedP = np.divide(8500.*np.pi, 30)
+rot_speedM = np.divide(8500.*np.pi, 30)
 shape = IN5["det_shape"]
 
 reso_method = "vio"    # "vio", "eck", "pop", or "cn"
@@ -84,7 +85,7 @@ params = {
     "angles":IN5["theta_i"] + IN5["phi_i"] + [theta_f, IN5["delta_theta_f"]],
     "dist_PM":IN5["L_chopP12"] + IN5["L_chopP2M1"] + IN5["L_chopM12"],
     "dist_MS":IN5["L_chopM2S"],
-    "dist_SD":IN5["rad_det"] + [0, IN5["delta_z"]],
+    "dist_SD":IN5["rad_det"] + [z, IN5["delta_z"]],
 
     # chopper informations of TOF instruments
     "chopperP":IN5["prop_chopP"] + [rot_speedP],

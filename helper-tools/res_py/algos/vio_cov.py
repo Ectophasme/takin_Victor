@@ -60,7 +60,7 @@ def calcDistLin(dist):
         L += dist[i]
     return L
 
-def reducedCoef(v_i, v_f, L_PM, l_angles, shape, verbose=False):
+def reducedCoef(v_i, v_f, L_PM, l_angles, shape):
     """v_i, v_f: velocities, L_PM: distance, l_angles: list of angles, shape in ("SPHERE", "VCYL", "HCYL")"""
     theta_i, phi_i, theta_f, phi_f = l_angles[0], l_angles[1], l_angles[2], l_angles[3]
 
@@ -220,8 +220,8 @@ def listDeltaTime(window_angleP, rot_speedP, window_angleM, rot_speedM, dltD = 0
 # Getting list of uncerntainty
 def getDeltas(param_geo, param_choppers, l_sizes, verbose = False):
     '''param_geo, param_choppers: see cov(...), l_sizes: list of 6 numbers'''
-    win_angleP, rot_speedP = getParamChopper(param_choppers['chopperP']) # degree and RPM
-    win_angleM, rot_speedM = getParamChopper(param_choppers['chopperM']) # degree and RPM
+    win_angleP, rot_speedP = getParamChopper(param_choppers['chopperP'])
+    win_angleM, rot_speedM = getParamChopper(param_choppers['chopperM'])
     ###########################################################################################
     if(verbose):
         print('win_angleP =', win_angleP, '; rot_speedP = ', rot_speedP)
@@ -277,7 +277,7 @@ def cov(param_geo, param_choppers, v_i, v_f, shape, verbose=False):
     l_dist, l_angles = np.array([L_PM, L_MS, L_SD, x, rad, z]), np.array([theta_i, phi_i, theta_f, phi_f])
 
     # Definition of variables depending on the shape of the detector
-    Ae, Ax, Ay, Az, Be, Bx, By, Bz = reducedCoef(v_i, v_f, L_PM, l_angles, shape, verbose)
+    Ae, Ax, Ay, Az, Be, Bx, By, Bz = reducedCoef(v_i, v_f, L_PM, l_angles, shape)
     l_AB = np.array([Ae, Ax, Ay, Az, Be, Bx, By, Bz])
 
     # Number of variables for each set of instrument's parameters (distances, times, angles)
