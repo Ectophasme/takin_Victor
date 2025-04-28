@@ -267,13 +267,13 @@ def cov(param_geo, param_choppers, v_i, v_f, shape, verbose=False):
         x, rad = param_geo["dist_SD"][0], param_geo["dist_SD"][2]
         L_SD = np.sqrt(np.square(x) + np.square(rad))
         # Angles
-        theta_i, phi_i, theta_f, phi_f = param_geo["angles"][0], param_geo["angles"][2], param_geo["angles"][4], np.acos(np.divide(rad, L_SD))
+        theta_i, phi_i, theta_f, phi_f = param_geo["angles"][0], param_geo["angles"][2], param_geo["angles"][4], np.arccos(np.divide(rad, L_SD))
     if(shape == "VCYL"):
         # Distances
         rad, z = param_geo["dist_SD"][0], param_geo["dist_SD"][2]
         L_SD = np.sqrt(np.square(rad) + np.square(z))
         # Angles
-        theta_i, phi_i, theta_f, phi_f = param_geo["angles"][0], param_geo["angles"][2], param_geo["angles"][4], np.acos(np.divide(rad, L_SD))
+        theta_i, phi_i, theta_f, phi_f = param_geo["angles"][0], param_geo["angles"][2], param_geo["angles"][4], np.arccos(np.divide(rad, L_SD))
     l_dist, l_angles = np.array([L_PM, L_MS, L_SD, x, rad, z]), np.array([theta_i, phi_i, theta_f, phi_f])
 
     # Definition of variables depending on the shape of the detector

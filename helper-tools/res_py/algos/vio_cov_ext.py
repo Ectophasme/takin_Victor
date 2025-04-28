@@ -332,101 +332,93 @@ def covxiMatrix(deltas):
 
 #     return covQhw
 
-def cov(dict_length, dict_angles, v_i, v_f, delta_plength, delta_angles, delta_time, shape, verbose=False):
-    """ dict_length = {"L_PM":value, "L_MS":value, "rad":value, (if HCYL: "x":value), (if VCYL: "z":value)}, dict_angles = {"theta_i":value, "phi_i":value, "theta_f":value, (if SPHERE: "phi_f":value)}, v_i, v_f: velocities,
-        delta_plength = {"dlt_pL_PM":[dlt_pL_PM_1, ..., dlt_pL_PM_N], "dlt_pL_MS":[dlt_pL_MS_1, ..., dlt_pL_MS_N], "dlt_prad":[dlt_prad1, dlt_prad2], (if HCYL: "dlt_px":[dlt_px1, dlt_px2]), (if VCYL: "dlt_pz":[dlt_pz1, dlt_pz2])},
-        delta_angles = {"dlt_theta_i":value, "dlt_phi_i":value, "dlt_theta_f":value, (if SPHERE: "dlt_phi_f":value)}, delta_time = {"dlt_t_P":value, "dlt_t_M":value, "dlt_t_D":value}, shape in ("SPHERE", "HCYL", "VCYL")
-        """
+
+# Only for shape = VCYL
+def cov(dict_length, dict_angles, v_i, v_f, delta, shape='VCYL', verbose=False):
+    """ dict_length = {"L_PM":value, "L_MS":value, "rad":value, "z":value}, dict_angles = {"theta_i":value, "phi_i":value, "theta_f":value}, v_i, v_f: velocities,
+    delta = {"dlt_Prad":value, "dlt_Pz":value, "dlt_Mrad":value, "dlt_Mz":value, "dlt_Srad":value, "dlt_Sz":value, "dlt_Drad":value, "dlt_Dz":value, 
+        "dlt_tP":value, "dlt_tM":value, "dlt_tD":value, "dlt_theta_i":value, "dlt_theta_f":value}, shape in ("SPHERE", "HCYL", "VCYL")
+    """
     # Calcul of distances and angles for each shape
-    L_PM, L_MS, rad, theta_i, phi_i, theta_f = dict_length["L_PM"], dict_length["L_MS"], dict_length["rad"], dict_angles["theta_i"], dict_angles["phi_i"], dict_angles["theta_f"]
-    x, z, phi_f = 0, 0, 0
-    if(shape == "SPHERE"):
-        L_SD, phi_f = rad, dict_angles["phi_f"]
-    if(shape == "HCYL"):
-        x = dict_length["x"]
-        L_SD, phi_f = np.sqrt(np.square(x) + np.square(rad)), np.atan(np.divide(x, rad))
-    if(shape == "VCYL"):
-        z = dict_length["z"]
-        L_SD, phi_f = np.sqrt(np.square(rad) + np.square(z)), np.atan(np.divide(z, rad))
-    l_dist, l_angles = np.array([L_PM, L_MS, L_SD, x, rad, z]), np.array([theta_i, phi_i, theta_f, phi_f])
-
-    # # Definition of A and B variables 
-    # Ae, Ax, Ay, Az, Be, Bx, By, Bz = reducedCoef(v_i, v_f, L_PM, l_angles, shape)
-    # l_AB = np.array([Ae, Ax, Ay, Az, Be, Bx, By, Bz])
-
-    Ae, Be, Au, Bu = np.divide(np.power(v_i, 3), L_PM), np.divide(np.power(v_f, 3), L_SD), np.divide(np.square(v_i), L_PM), np.divide(np.square(v_f), L_SD)
-    Ax, Ay, Az = Au*np.cos(theta_i)*np.cos(phi_i), Au*np.sin(theta_i)*np.cos(phi_i), Au*np.sin(phi_i)
-    Bx, By, Bz = Bu*np.cos(theta_f)*np.cos(phi_f), Bu*np.sin(theta_f)*np.cos(phi_f), Bu*np.sin(phi_f)
+    L_PM, L_MS, rad, z, theta_i, phi_i, theta_f = dict_length["L_PM"], dict_length["L_MS"], dict_length["rad"], dict_length["z"], dict_angles["theta_i"], dict_angles["phi_i"], dict_angles["theta_f"]
+    L_SD, phi_f = np.sqrt(np.square(rad) + np.square(z)), np.arctan(np.divide(z, rad))
 
     #Energie
-    dEdP = -np.divide(m_n, v_i)*(Ae + Be*np.divide(L_MS, L_PM)) * np.divide(1, np.square(m2A)*meV2J)
-    dEdM = np.divide(m_n, v_i)*(Ae + Be*(1 + np.divide(L_MS, L_PM))) * np.divide(1, np.square(m2A)*meV2J)
-    dEdS = (np.divide(m_n, v_f) - np.divide(m_n, v_i))*Be * np.divide(1, np.square(m2A)*meV2J)
-    dEdD = -np.divide(m_n, v_f)*Be * np.divide(1, np.square(m2A)*meV2J)
-    dEdtp = m_n*(Ae + Be*np.divide(L_MS, L_PM)) * np.divide(1, np.square(m2A)*meV2J)
-    dEdtm = -m_n*(Ae + Be*(1 + np.divide(L_MS, L_PM))) * np.divide(1, np.square(m2A)*meV2J)
-    dEdtd = m_n*Be * np.divide(1, np.square(m2A)*meV2J)
+    dEdPrad = -np.divide(m_n, L_PM) * ( np.square(v_i)*np.cos(phi_i) + np.divide(np.power(v_f, 3), v_i)*np.divide(L_MS, L_SD)*np.cos(phi_i) )*np.divide(1, np.square(m2A)*meV2J)
+    dEdPz = -np.divide(m_n, L_PM) * ( np.square(v_i)*np.sin(phi_i) + np.divide(np.power(v_f, 3), v_i)*np.divide(L_MS, L_SD)*np.sin(phi_i) )*np.divide(1, np.square(m2A)*meV2J)
+    dEdMrad = np.divide(m_n, L_PM) * ( np.square(v_i)*np.cos(phi_i) + np.divide(np.power(v_f, 3), v_i)*np.cos(phi_i)*( np.divide(L_PM, L_SD) + np.divide(L_MS, L_SD) ) )*np.divide(1, np.square(m2A)*meV2J)
+    dEdMz = np.divide(m_n, L_PM) * ( np.square(v_i)*np.sin(phi_i) + np.divide(np.power(v_f, 3), v_i)*np.sin(phi_i)*( np.divide(L_PM, L_SD) + np.divide(L_MS, L_SD) ) )*np.divide(1, np.square(m2A)*meV2J)
+    dEdSrad = np.divide(m_n, L_SD) * ( np.square(v_f)*np.cos(phi_f) - np.divide(np.power(v_f, 3), v_i)*np.cos(phi_i) )*np.divide(1, np.square(m2A)*meV2J)
+    dEdSz = np.divide(m_n, L_SD) * ( np.square(v_f)*np.sin(phi_f) - np.divide(np.power(v_f, 3), v_i)*np.sin(phi_i) )*np.divide(1, np.square(m2A)*meV2J)
+    dEdDrad = -np.divide(m_n, L_SD) * np.square(v_f)*np.cos(phi_f)*np.divide(1, np.square(m2A)*meV2J)
+    dEdDz = -np.divide(m_n, L_SD) * np.square(v_f)*np.sin(phi_f)*np.divide(1, np.square(m2A)*meV2J)
+    dEdtp = np.divide(m_n, L_PM) * ( np.power(v_i,3) + np.power(v_f, 3)*np.divide(L_MS, L_SD) )*np.divide(1, np.square(m2A)*meV2J)
+    dEdtm = np.divide(m_n, L_PM) * ( np.power(v_i,3) + np.power(v_f, 3)*np.divide(L_MS, L_SD) )*np.divide(1, np.square(m2A)*meV2J)
+    dEdtd = np.divide(m_n, L_SD) * np.power(v_f, 3)*np.divide(1, np.square(m2A)*meV2J)
     dEdtheta_i = 0
-    dEdphi_i = 0
     dEdtheta_f = 0
-    dEdphi_f = 0
-    dE = np.array([dEdP ,dEdM, dEdS, dEdD, dEdtp, dEdtm, dEdtd, dEdtheta_i, dEdphi_i, dEdtheta_f, dEdphi_f])
+    dE = np.array([dEdPrad, dEdPz, dEdMrad, dEdMz, dEdSrad, dEdSz, dEdDrad, dEdDz, dEdtp, dEdtm, dEdtd, dEdtheta_i, dEdtheta_f])
 
     #Qx
-    dQxdP = -np.divide(m_n, hbar*v_i)*(Ax + Bx*np.divide(L_MS, L_PM)) * np.divide(1, np.square(m2A))
-    dQxdM = np.divide(m_n, hbar*v_i)*(Ax + Bx*(1 + np.divide(L_MS, L_PM))) * np.divide(1, np.square(m2A))
-    dQxdS = (np.divide(m_n, hbar*v_f) - np.divide(m_n, hbar*v_i))*Bx * np.divide(1, np.square(m2A))
-    dQxdD = -np.divide(m_n, hbar*v_f)*Bx * np.divide(1, np.square(m2A))
-    dQxdtp = np.divide(m_n, hbar)*(Ax + Bx*np.divide(L_MS, L_PM)) * np.divide(1, np.square(m2A))
-    dQxdtm = -np.divide(m_n, hbar)*(Ax + Bx*(1 + np.divide(L_MS, L_PM))) * np.divide(1, np.square(m2A))
-    dQxdtd = np.divide(m_n, hbar)*Bx * np.divide(1, np.square(m2A))
-    dQxdtheta_i = -np.divide(m_n, hbar)*v_i*np.sin(theta_i)*np.cos(phi_i) * np.divide(1, np.square(m2A))
-    dQxdphi_i = -np.divide(m_n, hbar)*v_i*np.cos(theta_i)*np.sin(phi_i) * np.divide(1, np.square(m2A))
-    dQxdtheta_f = np.divide(m_n, hbar)*v_f*np.sin(theta_f)*np.cos(phi_f) * np.divide(1, np.square(m2A))
-    dQxdphi_f = np.divide(m_n, hbar)*v_f*np.cos(theta_f)*np.sin(phi_f) * np.divide(1, np.square(m2A))
-    dQx = np.array([dQxdP, dQxdM, dQxdS, dQxdD, dQxdtp, dQxdtm, dQxdtd, dQxdtheta_i, dQxdphi_i, dQxdtheta_f, dQxdphi_f])
+    dQxdPrad = -np.divide(m_n, hbar*L_PM) * ( v_i*np.cos(theta_i) + np.divide(np.square(v_f), v_i)*np.divide(L_MS, L_SD)*np.cos(theta_f)*np.cos(phi_f)*np.cos(phi_i) ) *np.divide(1, np.square(m2A))
+    dQxdPz = -np.divide(m_n, hbar*L_PM) * np.divide(np.square(v_f), v_i)*np.divide(L_MS, L_SD)*np.cos(theta_f)*np.cos(phi_f)*np.sin(phi_i) *np.divide(1, np.square(m2A))
+    dQxdMrad = np.divide(m_n, hbar*L_PM) * ( v_i*np.cos(theta_i) + np.divide(np.square(v_f), v_i)*np.cos(theta_f)*np.cos(phi_f)*np.cos(phi_i)*( np.divide(L_PM, L_SD) + np.divide(L_MS, L_SD) ) ) *np.divide(1, np.square(m2A))
+    dQxdMz = np.divide(m_n, hbar*L_PM) * np.divide(np.square(v_f), v_i)*np.cos(theta_f)*np.cos(phi_f)*np.sin(phi_i)*( np.divide(L_PM, L_SD) + np.divide(L_MS, L_SD) ) *np.divide(1, np.square(m2A))
+    dQxdSrad = np.divide(m_n, hbar*L_SD) * ( v_f*np.cos(theta_f) - np.divide(np.square(v_f), v_i)*np.cos(theta_f)*np.cos(phi_f)*np.cos(phi_i) ) *np.divide(1, np.square(m2A))
+    dQxdSz = -np.divide(m_n, hbar*L_SD) * np.divide(np.square(v_f), v_i)*np.cos(theta_f)*np.cos(phi_f)*np.sin(phi_i) *np.divide(1, np.square(m2A))
+    dQxdDrad = -np.divide(m_n, hbar*L_SD) * v_f*np.cos(theta_f) *np.divide(1, np.square(m2A))
+    dQxdDz = 0
+    dQxdtp = np.divide(m_n, hbar*L_PM) * ( np.square(v_i)*np.cos(theta_i)*np.cos(phi_i) + np.square(v_f)*np.cos(theta_f)*np.cos(phi_f)*np.divide(L_MS, L_SD) ) *np.divide(1, np.square(m2A))
+    dQxdtm = -np.divide(m_n, hbar*L_PM) * ( np.square(v_i)*np.cos(theta_i)*np.cos(phi_i) + np.square(v_f)*np.cos(theta_f)*np.cos(phi_f)*( np.divide(L_PM, L_SD) + np.divide(L_MS, L_SD) ) ) *np.divide(1, np.square(m2A))
+    dQxdtd = np.divide(m_n, hbar*L_SD) * np.square(v_f)*np.cos(theta_f)*np.cos(phi_f) *np.divide(1, np.square(m2A))
+    dQxdtheta_i = -np.divide(m_n, hbar) * v_i*np.sin(theta_i)*np.cos(phi_i) *np.divide(1, np.square(m2A))
+    dQxdtheta_f = np.divide(m_n, hbar) * v_f*np.sin(theta_f)*np.cos(phi_f) *np.divide(1, np.square(m2A))
+    dQx = np.array([dQxdPrad, dQxdPz, dQxdMrad, dQxdMz, dQxdSrad, dQxdSz, dQxdDrad, dQxdDz, dQxdtp, dQxdtm, dQxdtd, dQxdtheta_i, dQxdtheta_f])
 
     #Qy
-    dQydP = -np.divide(m_n, hbar*v_i)*(Ay + By*np.divide(L_MS, L_PM)) * np.divide(1, np.square(m2A))
-    dQydM = np.divide(m_n, hbar*v_i)*(Ay + By*(1 + np.divide(L_MS, L_PM))) * np.divide(1, np.square(m2A))
-    dQydS = (np.divide(m_n, hbar*v_f) - np.divide(m_n, hbar*v_i))*By * np.divide(1, np.square(m2A))
-    dQydD = -np.divide(m_n, hbar*v_f)*By * np.divide(1, np.square(m2A))
-    dQydtp = np.divide(m_n, hbar)*(Ay + By*np.divide(L_MS, L_PM)) * np.divide(1, np.square(m2A))
-    dQydtm = -np.divide(m_n, hbar)*(Ay + By*(1 + np.divide(L_MS, L_PM))) * np.divide(1, np.square(m2A))
-    dQydtd = np.divide(m_n, hbar)*By * np.divide(1, np.square(m2A))
-    dQydtheta_i = np.divide(m_n, hbar)*v_i*np.cos(theta_i)*np.cos(phi_i) * np.divide(1, np.square(m2A))
-    dQydphi_i = -np.divide(m_n, hbar)*v_i*np.sin(theta_i)*np.sin(phi_i) * np.divide(1, np.square(m2A))
-    dQydtheta_f = -np.divide(m_n, hbar)*v_f*np.cos(theta_f)*np.cos(phi_f) * np.divide(1, np.square(m2A))
-    dQydphi_f = np.divide(m_n, hbar)*v_f*np.sin(theta_f)*np.sin(phi_f) * np.divide(1, np.square(m2A))
-    dQy = np.array([dQydP, dQydM, dQydS, dQydD, dQydtp, dQydtm, dQydtd, dQydtheta_i, dQydphi_i, dQydtheta_f, dQydphi_f])
+    dQydPrad = -np.divide(m_n, hbar*L_PM) * ( v_i*np.sin(theta_i) + np.divide(np.square(v_f), v_i)*np.divide(L_MS, L_SD)*np.sin(theta_f)*np.cos(phi_f)*np.cos(phi_i) ) *np.divide(1, np.square(m2A))
+    dQydPz = -np.divide(m_n, hbar*L_PM) * np.divide(np.square(v_f), v_i)*np.divide(L_MS, L_SD)*np.sin(theta_f)*np.cos(phi_f)*np.sin(phi_i) *np.divide(1, np.square(m2A))
+    dQydMrad = np.divide(m_n, hbar*L_PM) * ( v_i*np.sin(theta_i) + np.divide(np.square(v_f), v_i)*np.sin(theta_f)*np.cos(phi_f)*np.cos(phi_i)*( np.divide(L_PM, L_SD) + np.divide(L_MS, L_SD) ) ) *np.divide(1, np.square(m2A))
+    dQydMz = np.divide(m_n, hbar*L_PM) * np.divide(np.square(v_f), v_i)*np.sin(theta_f)*np.cos(phi_f)*np.sin(phi_i)*( np.divide(L_PM, L_SD) + np.divide(L_MS, L_SD) ) *np.divide(1, np.square(m2A))
+    dQydSrad = np.divide(m_n, hbar*L_SD) * ( v_f*np.sin(theta_f) - np.divide(np.square(v_f), v_i)*np.sin(theta_f)*np.cos(phi_f)*np.cos(phi_i) ) *np.divide(1, np.square(m2A))
+    dQydSz = -np.divide(m_n, hbar*L_SD) * np.divide(np.square(v_f), v_i)*np.sin(theta_f)*np.cos(phi_f)*np.sin(phi_i) *np.divide(1, np.square(m2A))
+    dQydDrad = -np.divide(m_n, hbar*L_SD) * v_f*np.sin(theta_f) *np.divide(1, np.square(m2A))
+    dQydDz = 0
+    dQydtp = np.divide(m_n, hbar*L_PM) * ( np.square(v_i)*np.sin(theta_i)*np.cos(phi_i) + np.square(v_f)*np.sin(theta_f)*np.cos(phi_f)*np.divide(L_MS, L_SD) ) *np.divide(1, np.square(m2A))
+    dQydtm = -np.divide(m_n, hbar*L_PM) * ( np.square(v_i)*np.sin(theta_i)*np.cos(phi_i) + np.square(v_f)*np.sin(theta_f)*np.cos(phi_f)*( np.divide(L_PM, L_SD) + np.divide(L_MS, L_SD) ) ) *np.divide(1, np.square(m2A))
+    dQydtd = np.divide(m_n, hbar*L_SD) * np.square(v_f)*np.sin(theta_f)*np.cos(phi_f) *np.divide(1, np.square(m2A))
+    dQydtheta_i = np.divide(m_n, hbar) * v_i*np.cos(theta_i)*np.cos(phi_i) *np.divide(1, np.square(m2A))
+    dQydtheta_f = -np.divide(m_n, hbar) * v_f*np.cos(theta_f)*np.cos(phi_f) *np.divide(1, np.square(m2A))
+    dQy = np.array([dQydPrad, dQydPz, dQydMrad, dQydMz, dQydSrad, dQydSz, dQydDrad, dQydDz, dQydtp, dQydtm, dQydtd, dQydtheta_i, dQydtheta_f])
 
     #Qz
-    dQzdP = -np.divide(m_n, hbar*v_i)*(Az + Bz*np.divide(L_MS, L_PM)) * np.divide(1, np.square(m2A))
-    dQzdM = np.divide(m_n, hbar*v_i)*(Az + Bz*(1 + np.divide(L_MS, L_PM))) * np.divide(1, np.square(m2A))
-    dQzdS = (np.divide(m_n, hbar*v_f) - np.divide(m_n, hbar*v_i))*Bz * np.divide(1, np.square(m2A))
-    dQzdD = -np.divide(m_n, hbar*v_f)*Bz * np.divide(1, np.square(m2A))
-    dQzdtp = np.divide(m_n, hbar)*(Az + Bz*np.divide(L_MS, L_PM)) * np.divide(1, np.square(m2A))
-    dQzdtm = -np.divide(m_n, hbar)*(Az + Bz*(1 + np.divide(L_MS, L_PM))) * np.divide(1, np.square(m2A))
-    dQzdtd = np.divide(m_n, hbar)*Bz * np.divide(1, np.square(m2A))
+    dQzdPrad = -np.divide(m_n, hbar*L_PM) * np.divide(np.square(v_f), v_i)*np.divide(L_MS, L_SD)*np.sin(phi_f)*np.cos(phi_i) *np.divide(1, np.square(m2A))
+    dQzdPz = -np.divide(m_n, hbar*L_PM) * ( v_i + np.divide(np.square(v_f), v_i)*np.divide(L_MS, L_SD)*np.sin(phi_f)*np.sin(phi_i) ) *np.divide(1, np.square(m2A))
+    dQzdMrad = np.divide(m_n, hbar*L_PM) * np.divide(np.square(v_f), v_i)*np.sin(phi_f)*np.cos(phi_i)*( np.divide(L_PM, L_SD) + np.divide(L_MS, L_SD) ) *np.divide(1, np.square(m2A))
+    dQzdMz = np.divide(m_n, hbar*L_PM) * ( v_i + np.divide(np.square(v_f), v_i)*np.sin(phi_f)*np.sin(phi_i)*( np.divide(L_PM, L_SD) + np.divide(L_MS, L_SD) ) ) *np.divide(1, np.square(m2A))
+    dQzdSrad = np.divide(m_n, hbar*L_SD) * np.divide(np.square(v_f), v_i)*np.sin(phi_f)*np.cos(phi_i) *np.divide(1, np.square(m2A))
+    dQzdSz = -np.divide(m_n, hbar*L_SD) * ( v_f - np.divide(np.square(v_f), v_i)*np.sin(phi_f)*np.sin(phi_i) ) *np.divide(1, np.square(m2A))
+    dQzdDrad = 0
+    dQzdDz = -np.divide(m_n, hbar*L_SD) * v_f *np.divide(1, np.square(m2A))
+    dQzdtp = np.divide(m_n, hbar*L_PM) * ( np.square(v_i)*np.sin(phi_i) + np.square(v_f)*np.sin(phi_f)*np.divide(L_MS, L_SD) ) *np.divide(1, np.square(m2A))
+    dQzdtm = -np.divide(m_n, hbar*L_PM) * ( np.square(v_i)*np.sin(phi_i) + np.square(v_f)*np.sin(phi_f)*( np.divide(L_PM, L_SD) + np.divide(L_MS, L_SD) ) ) *np.divide(1, np.square(m2A))
+    dQzdtd = np.divide(m_n, hbar*L_SD) * np.square(v_f)*np.sin(phi_f) *np.divide(1, np.square(m2A))
     dQzdtheta_i = 0
-    dQzdphi_i = np.divide(m_n, hbar)*v_i*np.cos(phi_i) * np.divide(1, np.square(m2A))
     dQzdtheta_f = 0
-    dQzdphi_f = -np.divide(m_n, hbar)*v_f*np.cos(phi_f) * np.divide(1, np.square(m2A))
-    dQz = np.array([dQzdP, dQzdM, dQzdS, dQzdD, dQzdtp, dQzdtm, dQzdtd, dQzdtheta_i, dQzdphi_i, dQzdtheta_f, dQzdphi_f])
+    dQz = np.array([dQzdPrad, dQzdPz, dQzdMrad, dQzdMz, dQzdSrad, dQzdSz, dQzdDrad, dQzdDz, dQzdtp, dQzdtm, dQzdtd, dQzdtheta_i, dQzdtheta_f])
 
-    deltas = np.concatenate((delta_plength, delta_time, delta_angles))
+    deltas = np.array([ delta["dlt_Prad"], delta["dlt_Pz"], delta["dlt_Mrad"], delta["dlt_Mz"], delta["dlt_Srad"], delta["dlt_Sz"], delta["dlt_Drad"], delta["dlt_Dz"], delta["dlt_tP"], delta["dlt_tM"], delta["dlt_tD"], delta["dlt_theta_i"], delta["dlt_theta_f"] ])
     jacobian, covxi = jacobianMatrix(dQx, dQy, dQz, dE), covxiMatrix(deltas)
 
     covQhw = np.dot(jacobian, np.dot(covxi, jacobian.T))
     ###########################################################################################
     if(verbose):
         print('dict_length =', dict_length, 'dict_angles =', dict_angles)
-        print('delta_plength =', delta_plength, 'delta_angles =', delta_angles, 'delta_time', delta_time)
+        print('delta =', delta)
         print('v_i =', v_i, '; v_f =', v_f)
         print('det_shape =', shape, '\n')
         print('L_PM =', L_PM, '; L_MS =', L_MS, '; L_SD =', L_SD)
-        print('x =', x, '; rad =', rad, '; z=', z, '; theta_i =', theta_i, '; phi_i =', phi_i, '; theta_f =', theta_f, '; phi_f =', phi_f, '\n')
-        print('Ae =', Ae, '; Ax =', Ax, '; Ay =', Ay, '; Az =', Az, '\nBe =', Be, '; Bx =', Bx, '; By =', By, '; Bz =', Bz, '\n')
+        print('rad =', rad, '; z=', z, '; theta_i =', theta_i, '; phi_i =', phi_i, '; theta_f =', theta_f, '; phi_f =', phi_f, '\n')
         print('dQx =', dQx, '\ndQy =', dQy, '\ndQz =', dQz, '\ndE =', dE, '\n')
         print('deltas =', deltas, '\n')
         print('Jacobian =', jacobian, '\n')
