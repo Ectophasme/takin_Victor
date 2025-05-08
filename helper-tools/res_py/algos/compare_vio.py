@@ -64,38 +64,72 @@ IN5 = {
     "delta_time_det":0
 }
 
-lambdak = 1
-k_i = 2*np.pi/lambdak
-k_f = 2*np.pi/lambdak
-Q = 1
-theta_f = tas.get_scattering_angle(k_i, k_f, Q)
-
-Q_ki = tas.get_psi(k_i, k_f, Q, 1)
-rot = helpers.rotation_matrix_nd(-Q_ki, 4)
-
-v_i = vio_cov.k2v(k_i)
-v_f = vio_cov.k2v(k_f)
-
-d_geo = {"dist_PM":[149.8e7, 0., 7800.6e7, 0.], "dist_MS":[54.8e7, 0., 1229.5e7, 0.], "dist_SD":[4000.e7, 26e7, 0, 30e7], "angles":[0, 0, 0, 0, theta_f, 6.5e-3], "delta_time_detector":0}
 d_choppers = {"chopperP":[np.deg2rad(9.), np.divide(7000.*np.pi, 30), np.divide(17000.*np.pi, 30), np.divide(8500.*np.pi, 30)], "chopperM":[np.deg2rad(3.25), np.divide(7000.*np.pi, 30), np.divide(17000.*np.pi, 30), np.divide(8500.*np.pi, 30)]}
+d_length = {"L_PM":8005.2e7, "L_MS":1229.5e7, "rad":4000.e7, "z":0}
+d_delta = {"dlt_Prad":0, "dlt_Pz":0, "dlt_Mrad":0, "dlt_Mz":0, "dlt_Srad":0, "dlt_Sz":0, "dlt_Drad":26e7, "dlt_Dz":30e7, "dlt_tP":8.82e-5, "dlt_tM":3.19e-5, "dlt_tD":0, "dlt_theta_i":0, "dlt_theta_f":6.5e-3}
 det_shape = 'VCYL'
 
-d_length = {"L_PM":7949.8e7, "L_MS":1284.3e7, "rad":4000.e7, "z":0}
-d_angles = {"theta_i":0, "phi_i":0, "theta_f":theta_f}
-d_delta = {"dlt_Prad":0, "dlt_Pz":0, "dlt_Mrad":0, "dlt_Mz":0, "dlt_Srad":0, "dlt_Sz":0, "dlt_Drad":26e7, "dlt_Dz":30e7, "dlt_tP":8.82e-5, "dlt_tM":3.19e-5, "dlt_tD":0, "dlt_theta_i":0, "dlt_theta_f":6.5e-3}
+l_lambda = [1, 3, 5, 10, 12, 20]
+nb_lbd = len(l_lambda)
+violini = []
+violiniExt = []
+for i in range(nb_lbd):
+    lambdak = l_lambda[i]
+    k_i = 2*np.pi/lambdak
+    k_f = 2*np.pi/lambdak
+    if i >= 3:
+        Q = 0.5
+    else:
+        Q = 1
+    v_i = vio_cov.k2v(k_i)
+    v_f = vio_cov.k2v(k_f)
+    theta_f = tas.get_scattering_angle(k_i, k_f, Q)
+    d_geo = {"dist_PM":[149.8e7, 0., 7800.6e7, 0., 54.8e7, 0.], "dist_MS":[1229.5e7, 0.], "dist_SD":[4000.e7, 26e7, 0, 30e7], "angles":[0, 0, 0, 0, theta_f, 6.5e-3], "delta_time_detector":0}
+    d_angles = {"theta_i":0, "phi_i":0, "theta_f":theta_f}
 
-print(lambdak)
-print("!!!!!!!!!! VIO !!!!!!!!!!")
-covVio = vio_cov.cov(d_geo, d_choppers, v_i, v_f, det_shape, True)
-covQhwVio = np.dot(rot.T, np.dot(covVio, rot))
-print(covQhwVio)
+    Q_ki = tas.get_psi(k_i, k_f, Q, 1)
+    rot = helpers.rotation_matrix_nd(-Q_ki, 4)
 
-print("\n!!!!!!!!!! VIO_ext !!!!!!!!!!")
-covVioExt = vio_cov_ext.cov(d_length, d_angles, v_i, v_f, d_delta, verbose=False)
-covQhwVioExt = np.dot(rot.T, np.dot(covVioExt, rot))
-print(covQhwVioExt)
+    print('\n', lambdak, k_i, k_f, v_i, v_f, tas.get_E(k_i, 0))
+    print("!!!!!!!!!! VIO !!!!!!!!!!")
+    covVio = vio_cov.cov(d_geo, d_choppers, v_i, v_f, det_shape, False)
+    covQhwVio = np.dot(rot.T, np.dot(covVio, rot))
+    print(covQhwVio)
+    lvio = [float(np.sqrt(covQhwVio[0][0])), float(np.sqrt(covQhwVio[1][1])), float(np.sqrt(covQhwVio[2][2])), float(np.sqrt(covQhwVio[3][3]))]
 
+    print("\n!!!!!!!!!! VIO_ext !!!!!!!!!!")
+    covVioExt = vio_cov_ext.cov(d_length, d_angles, v_i, v_f, d_delta, verbose=False)
+    covQhwVioExt = np.dot(rot.T, np.dot(covVioExt, rot))
+    print(covQhwVioExt)
+    lvioext = [float(np.sqrt(covQhwVioExt[0][0])), float(np.sqrt(covQhwVioExt[1][1])), float(np.sqrt(covQhwVioExt[2][2])), float(np.sqrt(covQhwVioExt[3][3]))]
 
+    violini.append(lvio)
+    violiniExt.append(lvioext)
+
+print('\n', '\n', violini, '\n')
+print(violiniExt)
+
+for i in range(nb_lbd):
+    print('\n', violini[i], '\n', violiniExt[i])
+#test
+
+lambd = 2
+ki = 2*np.pi/lambd
+kf = 2*np.pi/lambd
+Q_ = 1.2
+vi = vio_cov.k2v(ki)
+vf = vio_cov.k2v(kf)
+thetaf = tas.get_scattering_angle(ki, kf, Q_)
+chopRotSpeed = 12000
+dtp = 9/(chopRotSpeed*6*2)
+dtm = 3.25/(chopRotSpeed*6*2)
+
+dict_l = {"L_PM":8005.2e7, "L_MS":1229.5e7, "rad":4000.e7, "z":0}
+dict_a = {"theta_i":0, "phi_i":0, "theta_f":thetaf}
+dict_dlt = {"dlt_Prad":0, "dlt_Pz":0, "dlt_Mrad":0, "dlt_Mz":0, "dlt_Srad":0, "dlt_Sz":0, "dlt_Drad":0, "dlt_Dz":0, "dlt_tP":dtp, "dlt_tM":dtm, "dlt_tD":0, "dlt_theta_i":0, "dlt_theta_f":0}
+
+covVioExt = vio_cov_ext.cov(dict_l, dict_a, vi, vf, dict_dlt, verbose=True)
+print(covVioExt[3][3], np.sqrt(covVioExt[3][3]))
 ### vio
 #def cov(param_geo, param_choppers, v_i, v_f, shape, verbose=False):
 #    """param_geo: {dist_PM:[PM1, sigma1, PM2, sigma2, ...], dist_MS:[MS1, sigma1, MS2, sigma2, ...], dist_SD:[ (if HCYL: x, sigma_x), radius, sigma_r, (if VCYL: z, sigma_z)], angles:[theta_i, sigma_theta_i, phi_i, sigma_phi_i, theta_f, sigma_theta_f, (if SPHERE: phi_f, sigma_phi_f)], delta_time_detector:value (0 by default)},
