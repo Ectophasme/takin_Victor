@@ -272,7 +272,7 @@ def covxiMatrix(deltas):
         covxi[i][i] = np.square(deltas[i])
     return covxi
 
-# def cov(param_geo, param_choppers, v_i, v_f, shape, verbose=False):
+# def cov2(v_i, v_f, dict_length_angle, delta, shape='VCYL', verbose=False):
 #     """param_geo: {dist_PM:[PM1, sigma1, PM2, sigma2, ...], dist_MS:[MS1, sigma1, MS2, sigma2, ...], dist_SD:[ (if HCYL: x, sigma_x), radius, sigma_r, (if VCYL: z, sigma_z)], angles:[theta_i, sigma_theta_i, phi_i, sigma_phi_i, theta_f, sigma_theta_f, (if SPHERE: phi_f, sigma_phi_f)], delta_time_detector:value (0 by default)},
 #     param_choppers: {chopperP:[window_angle, min_rot_speed, max_rot_speed, rot_speed], chopperM:[window_angle, min_rot_speed, max_rot_speed, rot_speed]},
 #     v_i, v_f: velocity of the incident and scattered neutron,
@@ -334,15 +334,21 @@ def covxiMatrix(deltas):
 
 
 # Only for shape = VCYL
-def cov(dict_length, dict_angles, v_i, v_f, delta, shape='VCYL', verbose=False):
-    """ dict_length = {"L_PM":value, "L_MS":value, "rad":value, "z":value}, dict_angles = {"theta_i":value, "phi_i":value, "theta_f":value}, v_i, v_f: velocities,
-    delta = {"dlt_Prad":value, "dlt_Pz":value, "dlt_Mrad":value, "dlt_Mz":value, "dlt_Srad":value, "dlt_Sz":value, "dlt_Drad":value, "dlt_Dz":value, 
-        "dlt_tP":value, "dlt_tM":value, "dlt_tD":value, "dlt_theta_i":value, "dlt_theta_f":value}, shape in ("SPHERE", "HCYL", "VCYL")
-    """
+def cov(v_i, v_f, dict_LA, delta, shape='VCYL', verbose=False):
+    """ v_i, v_f: velocities, dict_LA = {"L_PM":value, "L_MS":value, "rad":value, (VCYL -> "z":value), "theta_i":value, "phi_i":value, "theta_f":value, "phi_f":value},
+    SPHERE: delta = {"dlt_P":value, "dlt_M":value, "dlt_S":value, "dlt_D":value, "dlt_theta_i":value, "dlt_phi_i":value, dlt_theta_f:value, "dlt_phi_f":value
+                "dlt_tP":value, "dlt_tM":value, "dlt_tD":value},
+    VCYL:   delta = {"dlt_Prad":value, "dlt_Pz":value, "dlt_Mrad":value, "dlt_Mz":value, "dlt_Srad":value, "dlt_Sz":value, "dlt_Drad":value, "dlt_Dz":value, 
+                "dlt_theta_i":value, "dlt_theta_f":value, "dlt_tP":value, "dlt_tM":value, "dlt_tD":value},
+    shape in ("SPHERE", "VCYL")
+    """   #shape in ("SPHERE", "HCYL", "VCYL")
     # Calcul of distances and angles for each shape
-    L_PM, L_MS, rad, z, theta_i, phi_i, theta_f = dict_length["L_PM"], dict_length["L_MS"], dict_length["rad"], dict_length["z"], dict_angles["theta_i"], dict_angles["phi_i"], dict_angles["theta_f"]
-    L_SD, phi_f = np.sqrt(np.square(rad) + np.square(z)), np.arctan(np.divide(z, rad))
-
+    L_PM, L_MS, theta_i, phi_i, theta_f, phi_f = dict_LA["L_PM"], dict_LA["L_MS"], dict_LA["theta_i"], dict_LA["phi_i"], dict_LA["theta_f"], dict_LA["phi_f"]
+    if shape == 'SPHERE':
+        L_SD = dict_LA["rad"]
+    if shape == 'VCYL':
+        rad, z = dict_LA["rad"], dict_LA["z"]
+        L_SD = np.sqrt(np.square(rad) + np.square(z))
     #Energie
     dEdPrad = -np.divide(m_n, L_PM) * ( np.square(v_i)*np.cos(phi_i) + np.divide(np.power(v_f, 3), v_i)*np.divide(L_MS, L_SD)*np.cos(phi_i) ) *np.divide(1, np.square(m2A)*meV2J)
     dEdPz = -np.divide(m_n, L_PM) * ( np.square(v_i)*np.sin(phi_i) + np.divide(np.power(v_f, 3), v_i)*np.divide(L_MS, L_SD)*np.sin(phi_i) ) *np.divide(1, np.square(m2A)*meV2J)
@@ -413,7 +419,7 @@ def cov(dict_length, dict_angles, v_i, v_f, delta, shape='VCYL', verbose=False):
     covQhw = np.dot(jacobian, np.dot(covxi, jacobian.T))
     ###########################################################################################
     if(verbose):
-        print('dict_length =', dict_length, 'dict_angles =', dict_angles)
+        print('dict_L_A =', dict_LA)
         print('delta =', delta)
         print('v_i =', v_i, '; v_f =', v_f)
         print('det_shape =', shape, '\n')

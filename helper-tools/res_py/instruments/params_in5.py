@@ -51,6 +51,42 @@ IN5 = {
     "delta_time_det":0
 }
 
+IN5ext_PCB_PS = { # PCB: Perfectly Collimated Beam, PS: Point Sample
+    "det_shape":"VCYL",
+    "P_rad":-9234.7e7,
+    "P_z":0,
+    "M_rad":-1229.5e7,
+    "M_z":0,
+    "S_rad":0,
+    "S_z":0,
+    "D_rad":4000e7,
+    # "D_z": defined by user
+    "L_PM":8005.2e7,
+    "L_MS":1229.5e7,
+    "rad_det":4000.e7,
+    "theta_i":0,
+    "phi_i":0, #arccos(M_rad/(M_rad^2 + M_z^2))
+    # "theta_f": defined by user
+    # list of delta
+    "dlt_Prad":12e7,
+    "dlt_Pz":0,
+    "dlt_Mrad":6e7,
+    "dlt_Mz":0,
+    "dlt_Srad":0,
+    "dlt_Sz":0,
+    "dlt_Drad":26e7,
+    "dlt_Dz":30e7,
+    "dlt_theta_i":0,
+    # dlt_tP: calculated using window angle and user rotational speed of the P chopper
+    # dlt_tM: calculated using window angle and user rotational speed of the M chopper
+    "dlt_tD":0,
+    "dlt_theta_f":6.5e-3,
+    # chopper
+    "chopperP_win_angle":np.deg2rad(9.), 
+    # chopperP_rot_speed: defined by user
+    "chopperM_win_angle":np.deg2rad(3.25),
+    # chopperM_rot_speed: defined by user
+}
 
 # settings
 ki = 2*np.pi/5  # 2.5

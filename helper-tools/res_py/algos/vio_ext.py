@@ -38,7 +38,7 @@ import numpy as np
 import numpy.linalg as la
 import libs.tas as tas
 import libs.helpers as helpers
-import algos.vio_cov_ext as vio_cov
+import algos.vio_cov_ext as vio_cov_ext
 
 
 #
@@ -58,7 +58,7 @@ def calc(param):
         print("this shape is not taken in account")
         return None
     # Velocity in m/s
-    vi, vf = vio_cov.k2v(ki), vio_cov.k2v(kf)
+    vi, vf = vio_cov_ext.k2v(ki), vio_cov_ext.k2v(kf)
     # Angles
     theta_i, phi_i, theta_f, phi_f = param["angles"][0], param["angles"][2], param["angles"][4], 0
     if(det_shape == 'SPHERE'):
@@ -88,7 +88,7 @@ def calc(param):
     # Energy transfer, Q vector and Covariance matrix
     E = tas.get_E(ki, kf)
     vec_Q = np.array([Q_x, Q_y, Q_z])
-    covQhw = vio_cov.cov(dict_geo, dict_choppers, vi, vf, det_shape, verbose)
+    covQhw = vio_cov_ext.cov(dict_geo, dict_choppers, vi, vf, det_shape, verbose)
     covQhwInv = la.inv(np.divide(covQhw, helpers.sig2fwhm))
     # Going from ki, kf, Qz to Qpara, Qperp, Qz :
     Q_ki = tas.get_psi(ki_xy, kf_xy, Q_xy, param["sample_sense"])
@@ -133,15 +133,18 @@ k_f = 2*np.pi/5
 Q = 1
 theta_f = tas.get_scattering_angle(k_i, k_f, Q)
 
-dict_length = {"L_PM":8005.2e7, "L_MS":1229.5e7, "rad":4000e7}
-dict_angles = {"theta_i":0, "phi_i":0, "theta_f":theta_f,"phi_f":0}
-v_i = vio_cov.k2v(k_i)
-v_f = vio_cov.k2v(k_f)
+dict_la = {"L_PM":8005.2e7, "L_MS":1229.5e7, "rad":4000e7, "z":0, "theta_i":0, "phi_i":0, "theta_f":theta_f,"phi_f":0}
+v_i = vio_cov_ext.k2v(k_i)
+v_f = vio_cov_ext.k2v(k_f)
+
+
+dlt = {"dlt_Prad":value, "dlt_Pz":value, "dlt_Mrad":value, "dlt_Mz":value, "dlt_Srad":value, "dlt_Sz":value, "dlt_Drad":value, "dlt_Dz":value, 
+        "dlt_theta_i":value, "dlt_theta_f":value, "dlt_tP":value, "dlt_tM":value, "dlt_tD":value}
 delta_plength = [0, 0, 0, 26e7]
 delta_angles = [0, 0, 6.5e-3, 7.5e-3]
 delta_time = [8.82e-5, 3.19e-5, 0]
 shape = 'SPHERE'
-covQhw = vio_cov.cov(dict_length, dict_angles, v_i, v_f, delta_plength, delta_angles, delta_time, shape, verbose=True)
+covQhw = vio_cov_ext.cov(dict_length, dict_angles, v_i, v_f, delta_plength, delta_angles, delta_time, shape, verbose=True)
 covQhwInv = la.inv(np.divide(covQhw, helpers.sig2fwhm))
 # Going from ki, kf, Qz to Qpara, Qperp, Qz :
 Q_ki = tas.get_psi(k_i, k_f, Q, 1)

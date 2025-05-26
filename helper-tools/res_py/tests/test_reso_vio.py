@@ -60,3 +60,9 @@ if(verbose and reso_method != "vio"):
 # describe and plot ellipses
 ellipses = reso.calc_ellipses(res["reso"], verbose = verbose)
 reso.plot_ellipses(ellipses, verbose = verbose)
+
+
+Q = np.array([[0,1,2,3],[4,5,6,7],[8,9,10,11],[12,13,14,15]])
+Q_cut = np.delete(np.delete(Q, 2, axis=0), 2, axis=1)
+Q_cut = np.delete(np.delete(Q_cut, 1, axis=0), 1, axis=1)
+print(Q_cut)
